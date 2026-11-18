@@ -1,0 +1,30 @@
+# ===== 빌드 =====
+BUILD_DIR=/home/worker/project/yocto/poky/build
+RECIPE=linux-yocto-recovery
+# 복구 커널 bbappend가 merge_config.sh로 마지막에 병합하는 cfg 파일 (실제 경로로 수정)
+LAYER_CFG=/home/worker/project/yocto/meta-safety/recipes-kernel/linux/files/recovery-kernel.cfg
+# 복구 커널 + 이를 포함하는 이미지 (복구 커널이 이미지에 들어가는 구조에 맞게 수정)
+BUILD_TARGETS=linux-yocto-recovery core-image-minimal
+
+# ===== kconfiglib 분석 (비우면 bitbake -e로 자동 탐색) =====
+KERNEL_SRC=
+FINAL_CONFIG=
+ARCH=x86
+CC=
+LD=
+
+# ===== QEMU 측정 (BUILD_DIR 기준 상대 경로) =====
+QEMU_BIN=tmp/work/x86_64-linux/qemu-helper-native/1.0/recipe-sysroot-native/usr/bin/qemu-system-x86_64
+IMAGE_DIR=tmp/deploy/images/qemux86-64
+ROOTFS=core-image-minimal-qemux86-64.rootfs.ext4
+NORMAL_CMDLINE=root=/dev/vda rw console=ttyS0,115200 tsc=reliable no_timer_check crashkernel=128M panic=0 swiotlb=0 vga=0x344
+QEMU_EXTRA=
+RUNS=3
+BOOT_TIMEOUT=120
+KEXEC_WAIT=30
+RECOVERY_TIMEOUT=10
+# true면 SDL 창 표시 (기본은 창 없이 실행)
+SHOW_DISPLAY=false
+# 복구 후 화면 중앙 색 확인 (계기판 앱이 칠하는 색, R,G,B)
+SCREEN_CHECK=true
+SCREEN_RGB=255,0,0
