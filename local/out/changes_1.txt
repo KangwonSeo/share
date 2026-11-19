@@ -1,0 +1,701 @@
+반복 1 (initial)  변경 300개
+
+CONFIG_EXPERT=y
+    이유: HIDDEN 옵션(VT, UNIX98_PTYS, BLOCK, NAMESPACES, X86_PM_TIMER 등)을 끄려면 필요  근거: 지도 HIDDEN needs=EXPERT  위험: 
+# CONFIG_DRM is not set
+    이유: rules OFF. 디스플레이 재초기화 금지  근거: rules.txt OFF CONFIG_DRM, 로그 bochs-drm  위험: 
+# CONFIG_DRM_I915 is not set
+    이유: 불필요 GPU 드라이버. ACPI_BUTTON, ACPI_VIDEO, I2C, SHMEM 등의 선택자  근거: 지도 DRM_I915 D  위험: 
+# CONFIG_DRM_VIRTIO_GPU is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_DRM_BOCHS is not set
+    이유: 화면 재초기화 금지  근거: 로그 0.968 bochs-drm  위험: 
+# CONFIG_DRM_CIRRUS_QEMU is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_DRM_SIMPLEDRM is not set
+    이유: FB_SIMPLE의 depends를 막고 있음  근거: 불일치 FB_SIMPLE DEPENDS_UNMET  위험: 
+# CONFIG_DRM_KMS_HELPER is not set
+    이유: DRM과 함께 끔  근거: 기준 cfg  위험: 
+# CONFIG_DRM_FBDEV_EMULATION is not set
+    이유: DRM과 함께 끔  근거: 기준 cfg  위험: 
+CONFIG_FB_SIMPLE=y
+    이유: rules KEEP. 승계받은 프레임버퍼를 /dev/fb0로 노출  근거: rules KEEP, 명세 디스플레이  위험: 
+# CONFIG_FB_VESA is not set
+    이유: rules OFF  근거: rules.txt  위험: 
+# CONFIG_FB_EFI is not set
+    이유: rules OFF  근거: rules.txt  위험: 
+# CONFIG_FB_MODE_HELPERS is not set
+    이유: simplefb에서는 불필요  근거: 지도 D  위험: 
+# CONFIG_FB_SYSMEM_HELPERS_DEFERRED is not set
+# CONFIG_FB_DEFERRED_IO is not set
+    이유: DRM 전용 helper  근거: 지도 S<-DRM  위험: 
+# CONFIG_USB_GSPCA is not set
+# CONFIG_USB_PWC is not set
+# CONFIG_USB_S2255 is not set
+# CONFIG_USB_VIDEO_CLASS is not set
+# CONFIG_VIDEOBUF2_VMALLOC is not set
+# CONFIG_VIDEOBUF2_CORE is not set
+# CONFIG_SYNC_FILE is not set
+# CONFIG_DMA_SHARED_BUFFER is not set
+    이유: DRM 전용  근거: 지도 S<-DRM  위험: 
+# CONFIG_AGP is not set
+    이유: 불필요  근거: 로그 공백 0.945->0.967 agpgart  위험: 
+# CONFIG_VGA_ARB is not set
+    이유: DRM이 없으면 불필요  근거: 로그 vgaarb, 지도 H needs EXPERT  위험: 
+# CONFIG_VT is not set
+    이유: rules OFF. 콘솔이 화면을 덮어씀  근거: rules.txt, 지도 H needs=EXPERT  위험: 
+# CONFIG_VT_CONSOLE is not set
+    이유: VT와 함께 끔  근거: 기준 cfg  위험: 
+# CONFIG_FRAMEBUFFER_CONSOLE is not set
+    이유: rules OFF  근거: 로그 fbcon 36ms  위험: 
+# CONFIG_VGA_CONSOLE is not set
+    이유: VT 미사용  근거: 지도 H needs EXPERT  위험: 
+# CONFIG_UNIX98_PTYS is not set
+    이유: PTY 불필요  근거: 불일치 UNIX98_PTYS HIDDEN needs EXPERT  위험: 
+# CONFIG_LEGACY_TIOCSTI is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_LDISC_AUTOLOAD is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SERIAL_8250_DEPRECATED_OPTIONS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SERIAL_8250_PCI is not set
+    이유: PCI 시리얼 없음. ttyS0은 PNP로 잡힘(SERIAL_8250_PNP는 유지)  근거: 로그 00:02: ttyS0 at I/O 0x3f8  위험: 
+# CONFIG_SERIAL_8250_EXAR is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SERIAL_8250_LPSS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SERIAL_8250_MID is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SERIAL_8250_PERICOM is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_VIRTIO_CONSOLE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SYSVIPC is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_POSIX_MQUEUE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CROSS_MEMORY_ATTACH is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_BPF_SYSCALL is not set
+    이유: 불필요. TASKS_RCU 계열의 선택자  근거: 지도 D, 로그 Tasks RCU  위험: 
+# CONFIG_BPF_JIT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PREEMPT_DYNAMIC is not set
+    이유: 불필요  근거: 지도 D  위험: 
+CONFIG_PREEMPT_NONE=y
+    이유: CHOICE. 오버헤드 감소  근거: 지도 PREEMPT C  위험: 
+# CONFIG_BSD_PROCESS_ACCT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CPU_ISOLATION is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_IKCONFIG is not set
+    이유: 크기 축소  근거: 지도 D  위험: 
+# CONFIG_CGROUPS is not set
+    이유: 컨테이너 기능 미사용  근거: 명세 미사용 목록, 지도 D  위험: 
+# CONFIG_NAMESPACES is not set
+    이유: 컨테이너 기능 미사용  근거: 지도 H needs EXPERT  위험: 
+# CONFIG_CHECKPOINT_RESTORE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_RD_GZIP is not set
+    이유: LZ4만 사용  근거: 명세 RD_LZ4  위험: 
+# CONFIG_RD_BZIP2 is not set
+    이유: LZ4만 사용  근거: 지도 D  위험: 
+# CONFIG_RD_LZMA is not set
+    이유: LZ4만 사용  근거: 지도 D  위험: 
+# CONFIG_RD_XZ is not set
+    이유: LZ4만 사용  근거: 지도 D  위험: 
+# CONFIG_RD_LZO is not set
+    이유: LZ4만 사용  근거: 지도 D  위험: 
+# CONFIG_RD_ZSTD is not set
+    이유: LZ4만 사용  근거: 지도 D  위험: 
+# CONFIG_INITRAMFS_PRESERVE_MTIME is not set
+    이유: 압축 해제 시간 단축  근거: 지도 D  위험: 
+# CONFIG_UID16 is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_SGETMASK_SYSCALL is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_SYSFS_SYSCALL is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_FHANDLE is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_ELF_CORE is not set
+    이유: 코어덤프 불필요  근거: 지도 H  위험: 
+# CONFIG_COREDUMP is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_PCSPKR_PLATFORM is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_AIO is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_IO_URING is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_CACHESTAT_SYSCALL is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_KPROBES is not set
+    이유: 디버그·트레이스 미사용  근거: 로그 공백 0.410 kprobes 직후  위험: 
+# CONFIG_FUNCTION_TRACER is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_FTRACE_SYSCALLS is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_KALLSYMS is not set
+    이유: 크기 축소. 선택자(KPROBES, FTRACE)는 함께 끔  근거: 지도 S<-KPROBES,FUNCTION_TRACER  위험: 
+CONFIG_BINFMT_ELF=y
+    이유: rules KEEP. IA32_EMULATION을 끈 뒤에도 명시적으로 유지  근거: rules KEEP  위험: 
+# CONFIG_BINFMT_SCRIPT is not set
+    이유: static ELF만 실행  근거: 명세 계기판 앱  위험: 
+# CONFIG_BINFMT_MISC is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_MPPARSE is not set
+    이유: ACPI MADT를 사용  근거: 로그 Using ACPI (MADT)  위험: 
+# CONFIG_X86_EXTENDED_PLATFORM is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_AMD_PLATFORM_DEVICE is not set
+    이유: PINCTRL, COMMON_CLK의 선택자  근거: 로그 pinctrl core  위험: 
+# CONFIG_HYPERVISOR_GUEST is not set
+    이유: TCG 환경이라 bare hardware로 부팅됨  근거: 로그 Booting paravirtualized kernel on bare hardware  위험: 
+# CONFIG_PARAVIRT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_KVM_GUEST is not set
+    이유: TCG  근거: 지도 D  위험: 
+CONFIG_PROCESSOR_SELECT=y
+    이유: CPU_SUP_* HIDDEN 해제  근거: 지도 needs=PROCESSOR_SELECT  위험: 
+# CONFIG_CPU_SUP_HYGON is not set
+    이유: Intel CPU  근거: 지도 H  위험: 
+# CONFIG_CPU_SUP_AMD is not set
+    이유: Intel CPU  근거: 로그 Intel Xeon E3-12xx v2  위험: 
+# CONFIG_CPU_SUP_CENTAUR is not set
+    이유: Intel CPU  근거: 지도 H  위험: 
+# CONFIG_CPU_SUP_ZHAOXIN is not set
+    이유: Intel CPU  근거: 지도 H  위험: 
+# CONFIG_SCHED_MC_PRIO is not set
+    이유: X86_INTEL_PSTATE, CPU_FREQ, ACPI_PROCESSOR의 선택자  근거: 지도 S<-SCHED_MC_PRIO  위험: 
+# CONFIG_SCHED_MC is not set
+    이유: 단일 CPU  근거: 명세 CPU 1개  위험: 
+# CONFIG_SCHED_CLUSTER is not set
+    이유: 단일 CPU  근거: 명세  위험: 
+# CONFIG_X86_MCE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PERF_EVENTS_INTEL_UNCORE is not set
+    이유: 디버그 기능  근거: 지도 D  위험: 
+# CONFIG_PERF_EVENTS_INTEL_RAPL is not set
+    이유: RAPL PMU 초기화 제거  근거: 로그 공백 0.796->0.819 RAPL PMU  위험: 
+# CONFIG_PERF_EVENTS_INTEL_CSTATE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PERF_EVENTS_AMD_UNCORE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_16BIT is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_X86_VSYSCALL_EMULATION is not set
+    이유: static 64bit 앱은 vsyscall을 쓰지 않음  근거: 지도 H  위험: 
+# CONFIG_X86_IOPL_IOPERM is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_MSR is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_CPUID is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_5LEVEL is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_CHECK_BIOS_CORRUPTION is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_MTRR_SANITIZER is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_KERNEL_IBT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_INTEL_MEMORY_PROTECTION_KEYS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_MODIFY_LDT_SYSCALL is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_EFI is not set
+    이유: SeaBIOS 환경  근거: 명세 SeaBIOS  위험: 
+# CONFIG_EFI_STUB is not set
+    이유: SeaBIOS 환경  근거: 지도 D  위험: 
+CONFIG_RELOCATABLE=y
+    이유: rules KEEP. EFI_STUB을 끈 뒤에도 명시적으로 유지(kdump에 필요)  근거: rules KEEP  위험: 
+# CONFIG_RANDOMIZE_BASE is not set
+    이유: crash kernel에는 불필요  근거: 지도 D  위험: 
+# CONFIG_RANDOMIZE_MEMORY is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_IA32_EMULATION is not set
+    이유: 64bit static 앱만 실행  근거: 명세  위험: 
+# CONFIG_COMPAT_32BIT_TIME is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_VIRTUALIZATION is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ISA_DMA_API is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_CPU_MITIGATIONS is not set
+    이유: alternatives/thunk 패칭 시간과 크기를 줄임  근거: 로그 공백 0.013->0.139, Spectre/ITS 줄  위험: 
+# CONFIG_PAGE_TABLE_ISOLATION is not set
+    이유: 상동  근거: 로그 Kernel/User page tables isolation  위험: 
+# CONFIG_RETPOLINE is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_RETHUNK is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CPU_UNRET_ENTRY is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CALL_DEPTH_TRACKING is not set
+    이유: CALL_THUNKS/CALL_PADDING의 선택자  근거: 지도 D  위험: 
+# CONFIG_CPU_IBPB_ENTRY is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CPU_IBRS_ENTRY is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CPU_SRSO is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_MITIGATION_RFDS is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_MITIGATION_SPECTRE_BHI is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_MITIGATION_ITS is not set
+    이유: 상동  근거: 로그 ITS: Mitigation  위험: 
+# CONFIG_MITIGATION_TSA is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_SUSPEND is not set
+    이유: 전원 관리 미사용  근거: 명세  위험: 
+# CONFIG_PM_DEBUG is not set
+    이유: 디버그 기능  근거: 지도 D  위험: 
+# CONFIG_PM_ADVANCED_DEBUG is not set
+    이유: 디버그 기능  근거: 지도 D  위험: 
+# CONFIG_ACPI_SPCR_TABLE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ACPI_REV_OVERRIDE_POSSIBLE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ACPI_AC is not set
+    이유: 전원 관리 미사용  근거: 지도 D  위험: 
+# CONFIG_ACPI_BATTERY is not set
+    이유: 전원 관리 미사용  근거: 지도 D  위험: 
+# CONFIG_ACPI_BUTTON is not set
+    이유: 입력/전원 미사용. 선택자 DRM_I915는 끔  근거: 로그 공백 0.894->0.927 Power Button  위험: 
+# CONFIG_ACPI_VIDEO is not set
+    이유: 선택자 DRM_I915는 끔  근거: 지도 S<-DRM_I915  위험: 
+# CONFIG_ACPI_FAN is not set
+    이유: 전원 관리 미사용  근거: 지도 D  위험: 
+# CONFIG_ACPI_THERMAL is not set
+    이유: 전원 관리 미사용  근거: 로그 thermal_sys  위험: 
+# CONFIG_X86_INTEL_PSTATE is not set
+    이유: 상동  근거: 지도  위험: 
+# CONFIG_ACPI_PROCESSOR is not set
+    이유: cpufreq/idle 미사용. 선택자 X86_INTEL_PSTATE는 SCHED_MC_PRIO와 함께 꺼짐  근거: 지도 S<-X86_INTEL_PSTATE  위험: 
+# CONFIG_ACPI_TABLE_UPGRADE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ACPI_PCC is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ACPI_PRMT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_PM_TIMER is not set
+    이유: acpi_pm clocksource 검증 시간 제거. HPET/TSC가 있음 (risk medium)  근거: 로그 공백 0.726->0.749 acpi_pm  위험: 
+# CONFIG_CPU_FREQ is not set
+    이유: 전원 관리 미사용  근거: 지도 S<-SCHED_MC_PRIO  위험: 
+# CONFIG_X86_ACPI_CPUFREQ is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_INTEL_IDLE is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_HALTPOLL_CPUIDLE is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_SECCOMP is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_STACKPROTECTOR is not set
+    이유: 크기·시간 감소  근거: 지도 D  위험: 
+# CONFIG_GCC_PLUGINS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_BLOCK is not set
+    이유: 디스크·블록 미사용. initramfs는 BLOCK 없이도 동작  근거: 명세 미사용, 지도 H needs EXPERT  위험: 
+# CONFIG_BLK_DEV is not set
+    이유: 상동  근거: 로그 brd, virtio_blk  위험: 
+# CONFIG_BLK_DEV_RAM is not set
+    이유: 상동  근거: 로그 공백 1.046->1.088 brd: module loaded  위험: 
+# CONFIG_VIRTIO_BLK is not set
+    이유: 상동  근거: 로그 virtio_blk  위험: 
+# CONFIG_BLK_DEV_NVME is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_ATA is not set
+    이유: AHCI 6포트 probe 제거  근거: 로그 ahci/ata1-6, t0→init 2.82s  위험: 
+# CONFIG_SCSI is not set
+    이유: 상동  근거: 로그 SCSI subsystem initialized  위험: 
+# CONFIG_MD is not set
+    이유: raid6/xor 벤치마크 제거  근거: 로그 raid6 gen() 공백, xor 55ms  위험: 
+# CONFIG_BLK_DEV_MD is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_MD_RAID456 is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_BLK_DEV_DM is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_DM_CRYPT is not set
+    이유: CRYPTO 선택자  근거: 불일치 CRYPTO  위험: 
+# CONFIG_RAID6_PQ_BENCHMARK is not set
+    이유: 벤치마크 제거  근거: 로그 raid6  위험: 
+# CONFIG_SWAP is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_COMPACTION is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_BALLOON_COMPACTION is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_NET is not set
+    이유: 네트워크 미사용. CRYPTO/FW_LOADER 등의 선택자 다수를 제거  근거: 명세, 불일치 CRYPTO/FW_LOADER  위험: 
+# CONFIG_NETDEVICES is not set
+    이유: 상동  근거: 로그 e100/e1000/igb  위험: 
+# CONFIG_WLAN is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_BT is not set
+    이유: 상동  근거: 로그 Bluetooth  위험: 
+# CONFIG_CFG80211 is not set
+    이유: FW_LOADER 선택자  근거: 불일치 FW_LOADER  위험: 
+# CONFIG_MAC80211 is not set
+    이유: 상동  근거: 불일치 CRYPTO  위험: 
+# CONFIG_RFKILL is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_ISDN is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_PCI_MSI is not set
+    이유: 사용하는 PCI 장치 없음  근거: 기준 cfg, 지도 D  위험: 
+# CONFIG_PCIEPORTBUS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PCIEASPM is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_PCI_IOV is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_HOTPLUG_PCI is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_DEVTMPFS_MOUNT is not set
+    이유: 앱이 직접 마운트함  근거: 명세 계기판 앱  위험: 
+# CONFIG_BNX2X is not set
+# CONFIG_BNXT is not set
+# CONFIG_R8169 is not set
+# CONFIG_BRCMSMAC is not set
+# CONFIG_BRCMFMAC_SDIO is not set
+# CONFIG_BRCMFMAC_USB is not set
+# CONFIG_BRCMFMAC_PCIE is not set
+# CONFIG_RT2800PCI is not set
+# CONFIG_RT2X00_LIB_FIRMWARE is not set
+# CONFIG_SND_HDA_CODEC_CA0132_DSP is not set
+# CONFIG_FW_LOADER is not set
+    이유: 선택자는 NET/SND와 함께 꺼짐  근거: 불일치 FW_LOADER  위험: 
+# CONFIG_FW_CACHE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ALLOW_DEV_COREDUMP is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_FIRMWARE_MEMMAP is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_DMIID is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PNP_DEBUG_MESSAGES is not set
+    이유: 디버그  근거: 지도 D  위험: 
+# CONFIG_EEPROM_AT24 is not set
+    이유: NVMEM 선택자  근거: 불일치 NVMEM  위험: 
+# CONFIG_RTC_CLASS is not set
+    이유: rtc_cmos probe 시간 제거. RTC_NVMEM(NVMEM 선택자)도 함께 꺼짐  근거: 로그 1.151~1.169 rtc_cmos, 불일치 NVMEM  위험: 
+# CONFIG_RTC_NVMEM is not set
+    이유: NVMEM 선택자  근거: 불일치 NVMEM  위험: 
+# CONFIG_NVMEM is not set
+    이유: 요청 유지  근거: 불일치 NVMEM  위험: 
+# CONFIG_INPUT is not set
+    이유: 입력 미사용. 선택자 VT/I915는 끔  근거: 명세, 지도 S<-VT,DRM_I915  위험: 
+# CONFIG_KEYBOARD_ATKBD is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_MOUSE_PS2 is not set
+    이유: 상동  근거: 로그 mousedev  위험: 
+# CONFIG_SERIO is not set
+    이유: 상동  근거: 로그 i8042  위험: 
+# CONFIG_HID_SUPPORT is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_HW_RANDOM is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_DEVPORT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_HPET is not set
+    이유: /dev/hpet 불필요(HPET_TIMER는 유지)  근거: 지도 D  위험: 
+# CONFIG_IGB is not set
+# CONFIG_MEDIA_SUBDRV_AUTOSELECT is not set
+# CONFIG_I2C is not set
+    이유: 선택자 DRM/IGB/MEDIA/I915는 끔  근거: 지도 S  위험: 
+# CONFIG_PTP_1588_CLOCK is not set
+    이유: 불필요  근거: 로그 PTP clock support  위험: 
+# CONFIG_PPS is not set
+    이유: 불필요  근거: 로그 pps_core  위험: 
+# CONFIG_GPIOLIB is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_HID_WACOM is not set
+# CONFIG_POWER_SUPPLY is not set
+    이유: 전원 관리 미사용  근거: 지도 S  위험: 
+# CONFIG_HWMON is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_THERMAL is not set
+    이유: 불필요  근거: 로그 thermal_sys  위험: 
+# CONFIG_WATCHDOG is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_MEDIA_SUPPORT is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SOUND is not set
+    이유: 사운드 미사용  근거: 로그 ALSA  위험: 
+# CONFIG_SND is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_USB_SUPPORT is not set
+    이유: USB 미사용  근거: 로그 usbcore  위험: 
+# CONFIG_MMC is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SND_HDA_CODEC_REALTEK is not set
+# CONFIG_SND_HDA_CODEC_ANALOG is not set
+# CONFIG_SND_HDA_CODEC_SIGMATEL is not set
+# CONFIG_SND_HDA_CODEC_CIRRUS is not set
+# CONFIG_SND_HDA_CODEC_CONEXANT is not set
+# CONFIG_SND_HDA_CODEC_CA0110 is not set
+# CONFIG_SND_HDA_CODEC_CMEDIA is not set
+# CONFIG_SND_HDA_GENERIC is not set
+# CONFIG_SND_CTL_LED is not set
+# CONFIG_NEW_LEDS is not set
+    이유: 불필요  근거: 지도 S  위험: 
+# CONFIG_VIRTIO_MENU is not set
+    이유: virtio 장치 미사용  근거: 지도 D  위험: 
+# CONFIG_VIRTIO_PCI is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_VIRTIO_BALLOON is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_VIRTIO_MMIO is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_VHOST_MENU is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SURFACE_PLATFORMS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_X86_PLATFORM_DEVICES is not set
+    이유: 불필요  근거: 지도 S<-DRM_I915  위험: 
+# CONFIG_IOMMU_SUPPORT is not set
+    이유: 불필요  근거: 로그 iommu  위험: 
+# CONFIG_IRQ_REMAP is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_EXT4_FS is not set
+    이유: initramfs 외 파일시스템 미사용  근거: 명세, 불일치 CRYPTO  위험: 
+# CONFIG_BTRFS_FS is not set
+    이유: 상동. RAID6/XOR 선택자  근거: 로그 raid6/xor  위험: 
+# CONFIG_FS_ENCRYPTION is not set
+    이유: 상동  근거: 불일치 CRYPTO  위험: 
+# CONFIG_DNOTIFY is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_INOTIFY_USER is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_AUTOFS_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_FUSE_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_OVERLAY_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ISO9660_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_MSDOS_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_VFAT_FS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PROC_KCORE is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_PROC_PAGE_MONITOR is not set
+    이유: 불필요  근거: 지도 H  위험: 
+# CONFIG_TMPFS_POSIX_ACL is not set
+    이유: 불필요  근거: 기준 cfg  위험: 
+# CONFIG_TMPFS_XATTR is not set
+    이유: 불필요  근거: 기준 cfg  위험: 
+# CONFIG_EFIVAR_FS is not set
+    이유: EFI 없음  근거: 지도 D  위험: 
+# CONFIG_MISC_FILESYSTEMS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_NETWORK_FILESYSTEMS is not set
+    이유: 불필요  근거: 로그 RPC/NFS  위험: 
+# CONFIG_NFS_FS is not set
+    이유: 불필요  근거: 로그 NFS id_resolver  위험: 
+# CONFIG_CIFS is not set
+    이유: 불필요  근거: 로그 공백 0.827 cifs.idmap  위험: 
+# CONFIG_NLS_CODEPAGE_437 is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_NLS_ISO8859_1 is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_ENCRYPTED_KEYS is not set
+    이유: 상동  근거: 불일치 CRYPTO  위험: 
+# CONFIG_SECURITY is not set
+    이유: 불필요  근거: 로그 LSM landlock  위험: 
+# CONFIG_SECURITY_LANDLOCK is not set
+    이유: 불필요  근거: 로그 landlock  위험: 
+# CONFIG_INTEGRITY is not set
+    이유: 불필요  근거: 지도 D  위험: 
+CONFIG_INIT_STACK_NONE=y
+    이유: CHOICE. 스택 zero-init 오버헤드 제거  근거: 지도 INIT_STACK_ALL_ZERO C  위험: 
+# CONFIG_CRYPTO_HW is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_DEV_VIRTIO is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_USER_API_HASH is not set
+    이유: CRYPTO_USER_API 선택자  근거: 불일치 CRYPTO_USER_API  위험: 
+# CONFIG_CRYPTO_USER_API_SKCIPHER is not set
+    이유: 상동  근거: 불일치  위험: 
+# CONFIG_CRYPTO_USER_API_RNG is not set
+    이유: 상동  근거: 불일치  위험: 
+# CONFIG_CRYPTO_USER_API_AEAD is not set
+    이유: 상동  근거: 불일치  위험: 
+# CONFIG_CRYPTO_TEST is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_DES is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_MD4 is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_CTS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CRYPTO_XTS is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_CRC8 is not set
+    이유: 불필요  근거: 지도 D  위험: 
+# CONFIG_SYMBOLIC_ERRNAME is not set
+    이유: 크기 축소  근거: 지도 D  위험: 
+# CONFIG_DEBUG_BUGVERBOSE is not set
+    이유: 크기 축소  근거: 지도 H  위험: 
+# CONFIG_MAGIC_SYSRQ is not set
+    이유: 복구 커널에서는 불필요  근거: 지도 D  위험: 
+# CONFIG_BLK_DEV_IO_TRACE is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_DEBUG_FS is not set
+    이유: 디버그 미사용  근거: 지도 S<-BLK_DEV_IO_TRACE  위험: 
+# CONFIG_SLUB_DEBUG is not set
+    이유: 디버그 미사용  근거: 지도 H  위험: 
+# CONFIG_DEBUG_MEMORY_INIT is not set
+    이유: 디버그 미사용  근거: 지도 H  위험: 
+# CONFIG_KFENCE is not set
+    이유: 디버그 미사용  근거: 로그 kfence: initialized  위험: 
+# CONFIG_FTRACE is not set
+    이유: 52299개 엔트리 할당과 패칭 제거  근거: 로그 ftrace: allocating 52299 entries, 공백 0.013->0.139  위험: 
+# CONFIG_FUNCTION_GRAPH_TRACER is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_DYNAMIC_FTRACE is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_KPROBE_EVENTS is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_UPROBE_EVENTS is not set
+    이유: 상동  근거: 지도 D  위험: 
+# CONFIG_X86_VERBOSE_BOOTUP is not set
+    이유: 출력 감소  근거: 지도 D  위험: 
+# CONFIG_RUNTIME_TESTING_MENU is not set
+    이유: 불필요  근거: 지도 D  위험: 
+CONFIG_UNWINDER_GUESS=y
+    이유: CHOICE. 프레임 포인터 오버헤드 제거 (risk low)  근거: 지도 UNWINDER_FRAME_POINTER C  위험: 
+
+[규칙 검사]
+보정 추가: CONFIG_DRM=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM_VIRTIO_GPU=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM_BOCHS=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM_CIRRUS_QEMU=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM_SIMPLEDRM=n (CONFIG_DRM_KMS_HELPER을 끄기 위해)
+보정 추가: CONFIG_DRM=n (CONFIG_FB_DEFERRED_IO을 끄기 위해)
+보정 추가: CONFIG_FB_SYSMEM_HELPERS_DEFERRED=n (CONFIG_FB_DEFERRED_IO을 끄기 위해)
+보정 추가: CONFIG_USB_GSPCA=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_USB_PWC=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_USB_S2255=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_USB_VIDEO_CLASS=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_VIDEOBUF2_VMALLOC=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_VIDEOBUF2_CORE=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_DRM=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_SYNC_FILE=n (CONFIG_DMA_SHARED_BUFFER을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_VGA_ARB을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_VT을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_VT_CONSOLE을 끄기 위해)
+제거(끌 수 없음): HW_CONSOLE: 프롬프트 없음(자동 결정, depends: VT && TTY) → 소스 수정 또는 조건 심볼 처리 필요
+보정 추가: CONFIG_EXPERT=y (CONFIG_VGA_CONSOLE을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_UNIX98_PTYS을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_NAMESPACES을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_UID16을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_SGETMASK_SYSCALL을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_SYSFS_SYSCALL을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_FHANDLE을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_ELF_CORE을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_COREDUMP을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_PCSPKR_PLATFORM을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_AIO을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_IO_URING을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_CACHESTAT_SYSCALL을 끄기 위해)
+보정 추가: CONFIG_KPROBES=n (CONFIG_KALLSYMS을 끄기 위해)
+보정 추가: CONFIG_FUNCTION_TRACER=n (CONFIG_KALLSYMS을 끄기 위해)
+보정 추가: CONFIG_FTRACE_SYSCALLS=n (CONFIG_KALLSYMS을 끄기 위해)
+보정 추가: CONFIG_PROCESSOR_SELECT=y (CONFIG_CPU_SUP_AMD을 끄기 위해)
+보정 추가: CONFIG_CPU_SUP_HYGON=n (CONFIG_CPU_SUP_AMD을 끄기 위해)
+보정 추가: CONFIG_PROCESSOR_SELECT=y (CONFIG_CPU_SUP_HYGON을 끄기 위해)
+보정 추가: CONFIG_PROCESSOR_SELECT=y (CONFIG_CPU_SUP_CENTAUR을 끄기 위해)
+보정 추가: CONFIG_PROCESSOR_SELECT=y (CONFIG_CPU_SUP_ZHAOXIN을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_X86_16BIT을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_X86_VSYSCALL_EMULATION을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_MODIFY_LDT_SYSCALL을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_ISA_DMA_API을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_ACPI_BUTTON을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_ACPI_VIDEO을 끄기 위해)
+보정 추가: CONFIG_SCHED_MC_PRIO=n (CONFIG_ACPI_PROCESSOR을 끄기 위해)
+보정 추가: CONFIG_X86_INTEL_PSTATE=n (CONFIG_ACPI_PROCESSOR을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_X86_PM_TIMER을 끄기 위해)
+보정 추가: CONFIG_SCHED_MC_PRIO=n (CONFIG_CPU_FREQ을 끄기 위해)
+보정 추가: CONFIG_SCHED_MC_PRIO=n (CONFIG_X86_INTEL_PSTATE을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_BLOCK을 끄기 위해)
+보정 추가: CONFIG_ATA=n (CONFIG_SCSI을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_PCIEASPM을 끄기 위해)
+보정 추가: CONFIG_CFG80211=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BNX2X=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BNXT=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_R8169=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BRCMSMAC=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BRCMFMAC_SDIO=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BRCMFMAC_USB=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_BRCMFMAC_PCIE=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_RT2800PCI=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_RT2X00_LIB_FIRMWARE=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_CA0132_DSP=n (CONFIG_FW_LOADER을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_ALLOW_DEV_COREDUMP을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_FIRMWARE_MEMMAP을 끄기 위해)
+보정 추가: CONFIG_EEPROM_AT24=n (CONFIG_NVMEM을 끄기 위해)
+보정 추가: CONFIG_RTC_NVMEM=n (CONFIG_NVMEM을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_INPUT을 끄기 위해)
+보정 추가: CONFIG_VT=n (CONFIG_INPUT을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_INPUT을 끄기 위해)
+보정 추가: CONFIG_KEYBOARD_ATKBD=n (CONFIG_SERIO을 끄기 위해)
+보정 추가: CONFIG_MOUSE_PS2=n (CONFIG_SERIO을 끄기 위해)
+보정 추가: CONFIG_IGB=n (CONFIG_I2C을 끄기 위해)
+보정 추가: CONFIG_MEDIA_SUBDRV_AUTOSELECT=n (CONFIG_I2C을 끄기 위해)
+보정 추가: CONFIG_DRM=n (CONFIG_I2C을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_I2C을 끄기 위해)
+보정 추가: CONFIG_PTP_1588_CLOCK=n (CONFIG_PPS을 끄기 위해)
+보정 추가: CONFIG_ACPI_AC=n (CONFIG_POWER_SUPPLY을 끄기 위해)
+보정 추가: CONFIG_ACPI_BATTERY=n (CONFIG_POWER_SUPPLY을 끄기 위해)
+보정 추가: CONFIG_HID_WACOM=n (CONFIG_POWER_SUPPLY을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_ACPI_VIDEO=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_SCHED_MC_PRIO=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_X86_INTEL_PSTATE=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_ACPI_PROCESSOR=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_ACPI_THERMAL=n (CONFIG_THERMAL을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_REALTEK=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_ANALOG=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_SIGMATEL=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_CIRRUS=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_CONEXANT=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_CA0110=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_CODEC_CMEDIA=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_HDA_GENERIC=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_SND_CTL_LED=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_HID_WACOM=n (CONFIG_NEW_LEDS을 끄기 위해)
+보정 추가: CONFIG_DRM_I915=n (CONFIG_X86_PLATFORM_DEVICES을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_PROC_PAGE_MONITOR을 끄기 위해)
+보정 추가: CONFIG_TMPFS_POSIX_ACL=n (CONFIG_TMPFS_XATTR을 끄기 위해)
+제거(끌 수 없음): CFG80211_REQUIRE_SIGNED_REGDB: 프롬프트 조건 ['CFG80211_CERTIFICATION_ONUS'] 자동 충족 불가 (허용 목록: ['EXPERT', 'PROCESSOR_SELECT'])
+보정 추가: CONFIG_EXPERT=y (CONFIG_DEBUG_BUGVERBOSE을 끄기 위해)
+보정 추가: CONFIG_BLK_DEV_IO_TRACE=n (CONFIG_DEBUG_FS을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_SLUB_DEBUG을 끄기 위해)
+보정 추가: CONFIG_EXPERT=y (CONFIG_DEBUG_MEMORY_INIT을 끄기 위해)
+[분석] t0→init 2.82s (로그는 1.169s에서 끝남): init 실행 전에 ATA/AHCI 6포트 probe, virtio_blk, NIC, USB, RTC 같은 비동기 probe가 끝나기를 기다림
+[분석] 0.981->1.088 (21+36+42ms): bochs-drm 재초기화와 fbcon이 160x50 콘솔로 전환. 명세 위반이기도 함
+[분석] FB_SIMPLE 요청=y 최종=n: DRM_SIMPLEDRM=y여서 depends(!DRM_SIMPLEDRM)를 만족하지 못함. DRM을 끄면 해소됨
+[분석] 0.410->0.492 (raid6 벤치 약 80ms): MD_RAID456/BTRFS가 RAID6_PQ를 선택하고, RAID6_PQ_BENCHMARK가 켜져 있음
+[분석] 0.827->0.882 (55ms): xor 체크섬 벤치마크(XOR_BLOCKS, BTRFS/MD 쪽에서 선택됨)와 keyring/cifs 등록
+[분석] 0.013->0.139 (126ms), 0.150->0.286 (136ms): ftrace 52299개 엔트리와 kprobes, retpoline/call-depth thunk 같은 alternatives 패칭, SMP 준비 과정 (추정, risk high)
+[분석] 0.315->0.340 SMP 기동, 0.340->0.362 (22ms): 보조 CPU 3개 기동. 명세상 CPU 1개로 충분함
+[분석] 0.726->0.749 (23ms): acpi_pm clocksource 검증 루프
+[분석] 0.796->0.819 (22ms): RAPL PMU 초기화와 system trusted keyring 생성
+[분석] 0.945->0.967 (22ms): 직후 agpgart 초기화, 8250 PCI 탐색
+[분석] CRYPTO/FW_LOADER/NVMEM/UNIX98_PTYS를 끄도록 요청했지만 최종=y: 선택자(NET, 파일시스템, 무선, DM_CRYPT 등)가 켜져 있고, UNIX98_PTYS는 EXPERT가 필요함
+
+[소스 수정 필요]
+HPET_TIMER: needs=X86_32. x86_64에서는 cfg로 못 끔(필요하기도 함)
+CRYPTO_DRBG: DERIVED. CRYPTO=n이 되면 자동으로 사라짐. 남으면 소스 수정 필요
+STRICT_KERNEL_RWX: needs ARCH_OPTIONAL_KERNEL_RWX. x86에서 고정됨
+
+[커맨드라인 제안 (자동 적용 안 함)]
+console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 printk.devkmsg=on nr_cpus=1

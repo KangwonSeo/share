@@ -1,0 +1,35 @@
+[목표]
+- 정상 커널 패닉 → kexec crash kernel(복구 커널) 부팅 → initramfs의 계기판 앱이 첫 화면을 그릴 때까지 1.0초 이내
+- 측정 종점: 커널 로그의 "[cluster] first frame done"
+- 우선순위: 시간 단축 > 커널 크기 축소 (둘 다 줄수록 좋음. 커널이 작을수록 패닉→t0 구간도 짧아짐)
+
+[환경]
+- x86_64, QEMU q35 (TCG), -vga std, SeaBIOS, 메모리 2GB, 복구 커널 예약 128MB
+- linux-yocto 6.6, Yocto 빌드
+- cfg 적용 방식: Yocto 기본 커널 설정 위에 cfg를 merge_config.sh로 마지막에 병합
+  → allnoconfig가 아니므로, 끌 옵션은 모두 '# CONFIG_X is not set'으로 명시해야 함
+
+[부팅 방식]
+- 정상 커널 부팅 스크립트가 kexec -p로 복구 커널 + initramfs를 미리 적재
+- 커맨드라인: console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 printk.devkmsg=on
+- 복구 커널은 SMP가 필요 없음 (CPU 1개로 충분)
+
+[계기판 앱 요구]
+- static ELF 바이너리, PID 1로 직접 실행 (셸 없음)
+- 스스로 devtmpfs를 /dev에 마운트
+- /dev/fb0를 open + ioctl(FBIOGET_*SCREENINFO) + mmap 해서 직접 픽셀 기록
+- /dev/kmsg로 로그 출력
+- 첫 화면 후 무한 대기 (종료하지 않음)
+
+[디스플레이]
+- 승계 방식: 정상 커널(VESA)이 쓰던 프레임버퍼를 그대로 사용
+  kexec-tools가 전달한 screen_info → sysfb → simple-framebuffer → /dev/fb0 (1024x768x32, 0xfd000000)
+- 디스플레이 재초기화 금지 (DRM, VESA/EFI fb 드라이버 사용 금지), 콘솔이 화면을 덮어쓰면 안 됨
+
+[복구 시점에 사용하지 않음]
+- 디스크·블록 장치, 네트워크, USB, 사운드, 입력 장치, 파일시스템(initramfs 외), 암호·키링, 컨테이너 기능, 전원 관리, 디버그·트레이스 기능
+- 단, 시리얼 콘솔(ttyS0, 0x3f8)과 printk 타임스탬프는 측정에 필요하므로 유지
+
+[모름]
+- 이후 단계(hand-over)에서 필요한 커널 기능: 모름
+- 실제 HW(ARM SoC) 보드 및 디스플레이 드라이버: 모름

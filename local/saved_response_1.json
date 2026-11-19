@@ -1,0 +1,2033 @@
+{
+  "id": "msg_011ChBSLLxLwHh1YzV3H3y1q",
+  "container": null,
+  "content": [
+    {
+      "signature": "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",
+      "thinking": "",
+      "type": "thinking"
+    },
+    {
+      "id": "toolu_01Mk819p8qhgqpS6vE2AZXsk",
+      "caller": {
+        "type": "direct"
+      },
+      "input": {
+        "analysis": [
+          {
+            "gap": "t0→init 2.82s (로그는 1.169s에서 끝남)",
+            "cause": "init 실행 전에 ATA/AHCI 6포트 probe, virtio_blk, NIC, USB, RTC 같은 비동기 probe가 끝나기를 기다림",
+            "evidence": "로그 1.110~1.169 ahci/scsi host0-5/ata1-6, e100/e1000/igb, usbcore, rtc_cmos"
+          },
+          {
+            "gap": "0.981->1.088 (21+36+42ms)",
+            "cause": "bochs-drm 재초기화와 fbcon이 160x50 콘솔로 전환. 명세 위반이기도 함",
+            "evidence": "[drm] Initialized bochs-drm, fbcon: bochs-drmdrmfb (fb0) is primary device, Console: switching to colour frame buffer device"
+          },
+          {
+            "gap": "FB_SIMPLE 요청=y 최종=n",
+            "cause": "DRM_SIMPLEDRM=y여서 depends(!DRM_SIMPLEDRM)를 만족하지 못함. DRM을 끄면 해소됨",
+            "evidence": "불일치 목록 FB_SIMPLE DEPENDS_UNMET"
+          },
+          {
+            "gap": "0.410->0.492 (raid6 벤치 약 80ms)",
+            "cause": "MD_RAID456/BTRFS가 RAID6_PQ를 선택하고, RAID6_PQ_BENCHMARK가 켜져 있음",
+            "evidence": "raid6: sse2x4/x2/x1 gen() 줄"
+          },
+          {
+            "gap": "0.827->0.882 (55ms)",
+            "cause": "xor 체크섬 벤치마크(XOR_BLOCKS, BTRFS/MD 쪽에서 선택됨)와 keyring/cifs 등록",
+            "evidence": "xor: automatically using best checksumming function, Key type cifs.idmap registered"
+          },
+          {
+            "gap": "0.013->0.139 (126ms), 0.150->0.286 (136ms)",
+            "cause": "ftrace 52299개 엔트리와 kprobes, retpoline/call-depth thunk 같은 alternatives 패칭, SMP 준비 과정 (추정, risk high)",
+            "evidence": "ftrace: allocating 52299 entries, Spectre/ITS 완화 줄, Freeing SMP alternatives memory"
+          },
+          {
+            "gap": "0.315->0.340 SMP 기동, 0.340->0.362 (22ms)",
+            "cause": "보조 CPU 3개 기동. 명세상 CPU 1개로 충분함",
+            "evidence": "smp: Bringing up secondary CPUs ... #1 #2 #3"
+          },
+          {
+            "gap": "0.726->0.749 (23ms)",
+            "cause": "acpi_pm clocksource 검증 루프",
+            "evidence": "clocksource: acpi_pm"
+          },
+          {
+            "gap": "0.796->0.819 (22ms)",
+            "cause": "RAPL PMU 초기화와 system trusted keyring 생성",
+            "evidence": "RAPL PMU, Initialise system trusted keyrings"
+          },
+          {
+            "gap": "0.945->0.967 (22ms)",
+            "cause": "직후 agpgart 초기화, 8250 PCI 탐색",
+            "evidence": "Linux agpgart interface v0.103"
+          },
+          {
+            "gap": "CRYPTO/FW_LOADER/NVMEM/UNIX98_PTYS를 끄도록 요청했지만 최종=y",
+            "cause": "선택자(NET, 파일시스템, 무선, DM_CRYPT 등)가 켜져 있고, UNIX98_PTYS는 EXPERT가 필요함",
+            "evidence": "불일치 목록"
+          }
+        ],
+        "cfg": [
+          {
+            "group": "core",
+            "symbol": "EXPERT",
+            "value": "y",
+            "reason": "HIDDEN 옵션(VT, UNIX98_PTYS, BLOCK, NAMESPACES, X86_PM_TIMER 등)을 끄려면 필요",
+            "evidence": "지도 HIDDEN needs=EXPERT"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM",
+            "value": "n",
+            "reason": "rules OFF. 디스플레이 재초기화 금지",
+            "evidence": "rules.txt OFF CONFIG_DRM, 로그 bochs-drm"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_KMS_HELPER",
+            "value": "n",
+            "reason": "DRM과 함께 끔",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_FBDEV_EMULATION",
+            "value": "n",
+            "reason": "DRM과 함께 끔",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_BOCHS",
+            "value": "n",
+            "reason": "화면 재초기화 금지",
+            "evidence": "로그 0.968 bochs-drm"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_SIMPLEDRM",
+            "value": "n",
+            "reason": "FB_SIMPLE의 depends를 막고 있음",
+            "evidence": "불일치 FB_SIMPLE DEPENDS_UNMET"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_I915",
+            "value": "n",
+            "reason": "불필요 GPU 드라이버. ACPI_BUTTON, ACPI_VIDEO, I2C, SHMEM 등의 선택자",
+            "evidence": "지도 DRM_I915 D"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_VIRTIO_GPU",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "display",
+            "symbol": "DRM_CIRRUS_QEMU",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "display",
+            "symbol": "FB_SIMPLE",
+            "value": "y",
+            "reason": "rules KEEP. 승계받은 프레임버퍼를 /dev/fb0로 노출",
+            "evidence": "rules KEEP, 명세 디스플레이"
+          },
+          {
+            "group": "display",
+            "symbol": "FB_VESA",
+            "value": "n",
+            "reason": "rules OFF",
+            "evidence": "rules.txt"
+          },
+          {
+            "group": "display",
+            "symbol": "FB_EFI",
+            "value": "n",
+            "reason": "rules OFF",
+            "evidence": "rules.txt"
+          },
+          {
+            "group": "display",
+            "symbol": "FB_MODE_HELPERS",
+            "value": "n",
+            "reason": "simplefb에서는 불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "display",
+            "symbol": "FB_DEFERRED_IO",
+            "value": "n",
+            "reason": "DRM 전용 helper",
+            "evidence": "지도 S<-DRM"
+          },
+          {
+            "group": "display",
+            "symbol": "DMA_SHARED_BUFFER",
+            "value": "n",
+            "reason": "DRM 전용",
+            "evidence": "지도 S<-DRM"
+          },
+          {
+            "group": "display",
+            "symbol": "AGP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 공백 0.945->0.967 agpgart"
+          },
+          {
+            "group": "display",
+            "symbol": "VGA_ARB",
+            "value": "n",
+            "reason": "DRM이 없으면 불필요",
+            "evidence": "로그 vgaarb, 지도 H needs EXPERT"
+          },
+          {
+            "group": "console",
+            "symbol": "VT",
+            "value": "n",
+            "reason": "rules OFF. 콘솔이 화면을 덮어씀",
+            "evidence": "rules.txt, 지도 H needs=EXPERT"
+          },
+          {
+            "group": "console",
+            "symbol": "VT_CONSOLE",
+            "value": "n",
+            "reason": "VT와 함께 끔",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "console",
+            "symbol": "HW_CONSOLE",
+            "value": "n",
+            "reason": "VT와 함께 끔",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "console",
+            "symbol": "FRAMEBUFFER_CONSOLE",
+            "value": "n",
+            "reason": "rules OFF",
+            "evidence": "로그 fbcon 36ms"
+          },
+          {
+            "group": "console",
+            "symbol": "VGA_CONSOLE",
+            "value": "n",
+            "reason": "VT 미사용",
+            "evidence": "지도 H needs EXPERT"
+          },
+          {
+            "group": "tty",
+            "symbol": "UNIX98_PTYS",
+            "value": "n",
+            "reason": "PTY 불필요",
+            "evidence": "불일치 UNIX98_PTYS HIDDEN needs EXPERT"
+          },
+          {
+            "group": "tty",
+            "symbol": "LEGACY_TIOCSTI",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "tty",
+            "symbol": "LDISC_AUTOLOAD",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_DEPRECATED_OPTIONS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_PCI",
+            "value": "n",
+            "reason": "PCI 시리얼 없음. ttyS0은 PNP로 잡힘(SERIAL_8250_PNP는 유지)",
+            "evidence": "로그 00:02: ttyS0 at I/O 0x3f8"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_EXAR",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_LPSS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_MID",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "SERIAL_8250_PERICOM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "serial",
+            "symbol": "VIRTIO_CONSOLE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "SYSVIPC",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "POSIX_MQUEUE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "CROSS_MEMORY_ATTACH",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "BPF_SYSCALL",
+            "value": "n",
+            "reason": "불필요. TASKS_RCU 계열의 선택자",
+            "evidence": "지도 D, 로그 Tasks RCU"
+          },
+          {
+            "group": "core",
+            "symbol": "BPF_JIT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "PREEMPT_DYNAMIC",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "PREEMPT_NONE",
+            "value": "y",
+            "reason": "CHOICE. 오버헤드 감소",
+            "evidence": "지도 PREEMPT C"
+          },
+          {
+            "group": "core",
+            "symbol": "BSD_PROCESS_ACCT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "CPU_ISOLATION",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "IKCONFIG",
+            "value": "n",
+            "reason": "크기 축소",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "CGROUPS",
+            "value": "n",
+            "reason": "컨테이너 기능 미사용",
+            "evidence": "명세 미사용 목록, 지도 D"
+          },
+          {
+            "group": "core",
+            "symbol": "NAMESPACES",
+            "value": "n",
+            "reason": "컨테이너 기능 미사용",
+            "evidence": "지도 H needs EXPERT"
+          },
+          {
+            "group": "core",
+            "symbol": "CHECKPOINT_RESTORE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_GZIP",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "명세 RD_LZ4"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_BZIP2",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_LZMA",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_XZ",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_LZO",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "RD_ZSTD",
+            "value": "n",
+            "reason": "LZ4만 사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "initrd",
+            "symbol": "INITRAMFS_PRESERVE_MTIME",
+            "value": "n",
+            "reason": "압축 해제 시간 단축",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "syscall",
+            "symbol": "UID16",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "SGETMASK_SYSCALL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "SYSFS_SYSCALL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "FHANDLE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "ELF_CORE",
+            "value": "n",
+            "reason": "코어덤프 불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "COREDUMP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "PCSPKR_PLATFORM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "AIO",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "IO_URING",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "CACHESTAT_SYSCALL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "syscall",
+            "symbol": "KALLSYMS",
+            "value": "n",
+            "reason": "크기 축소. 선택자(KPROBES, FTRACE)는 함께 끔",
+            "evidence": "지도 S<-KPROBES,FUNCTION_TRACER"
+          },
+          {
+            "group": "binfmt",
+            "symbol": "BINFMT_ELF",
+            "value": "y",
+            "reason": "rules KEEP. IA32_EMULATION을 끈 뒤에도 명시적으로 유지",
+            "evidence": "rules KEEP"
+          },
+          {
+            "group": "binfmt",
+            "symbol": "BINFMT_SCRIPT",
+            "value": "n",
+            "reason": "static ELF만 실행",
+            "evidence": "명세 계기판 앱"
+          },
+          {
+            "group": "binfmt",
+            "symbol": "BINFMT_MISC",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_MPPARSE",
+            "value": "n",
+            "reason": "ACPI MADT를 사용",
+            "evidence": "로그 Using ACPI (MADT)"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_EXTENDED_PLATFORM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_AMD_PLATFORM_DEVICE",
+            "value": "n",
+            "reason": "PINCTRL, COMMON_CLK의 선택자",
+            "evidence": "로그 pinctrl core"
+          },
+          {
+            "group": "x86",
+            "symbol": "HYPERVISOR_GUEST",
+            "value": "n",
+            "reason": "TCG 환경이라 bare hardware로 부팅됨",
+            "evidence": "로그 Booting paravirtualized kernel on bare hardware"
+          },
+          {
+            "group": "x86",
+            "symbol": "PARAVIRT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "KVM_GUEST",
+            "value": "n",
+            "reason": "TCG",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "PROCESSOR_SELECT",
+            "value": "y",
+            "reason": "CPU_SUP_* HIDDEN 해제",
+            "evidence": "지도 needs=PROCESSOR_SELECT"
+          },
+          {
+            "group": "x86",
+            "symbol": "CPU_SUP_AMD",
+            "value": "n",
+            "reason": "Intel CPU",
+            "evidence": "로그 Intel Xeon E3-12xx v2"
+          },
+          {
+            "group": "x86",
+            "symbol": "CPU_SUP_HYGON",
+            "value": "n",
+            "reason": "Intel CPU",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "CPU_SUP_CENTAUR",
+            "value": "n",
+            "reason": "Intel CPU",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "CPU_SUP_ZHAOXIN",
+            "value": "n",
+            "reason": "Intel CPU",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "SCHED_MC_PRIO",
+            "value": "n",
+            "reason": "X86_INTEL_PSTATE, CPU_FREQ, ACPI_PROCESSOR의 선택자",
+            "evidence": "지도 S<-SCHED_MC_PRIO"
+          },
+          {
+            "group": "x86",
+            "symbol": "SCHED_MC",
+            "value": "n",
+            "reason": "단일 CPU",
+            "evidence": "명세 CPU 1개"
+          },
+          {
+            "group": "x86",
+            "symbol": "SCHED_CLUSTER",
+            "value": "n",
+            "reason": "단일 CPU",
+            "evidence": "명세"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_MCE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "PERF_EVENTS_INTEL_UNCORE",
+            "value": "n",
+            "reason": "디버그 기능",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "PERF_EVENTS_INTEL_RAPL",
+            "value": "n",
+            "reason": "RAPL PMU 초기화 제거",
+            "evidence": "로그 공백 0.796->0.819 RAPL PMU"
+          },
+          {
+            "group": "x86",
+            "symbol": "PERF_EVENTS_INTEL_CSTATE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "PERF_EVENTS_AMD_UNCORE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_16BIT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_VSYSCALL_EMULATION",
+            "value": "n",
+            "reason": "static 64bit 앱은 vsyscall을 쓰지 않음",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_IOPL_IOPERM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_MSR",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_CPUID",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_5LEVEL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_CHECK_BIOS_CORRUPTION",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "MTRR_SANITIZER",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_KERNEL_IBT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "X86_INTEL_MEMORY_PROTECTION_KEYS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "MODIFY_LDT_SYSCALL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "x86",
+            "symbol": "EFI",
+            "value": "n",
+            "reason": "SeaBIOS 환경",
+            "evidence": "명세 SeaBIOS"
+          },
+          {
+            "group": "x86",
+            "symbol": "EFI_STUB",
+            "value": "n",
+            "reason": "SeaBIOS 환경",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "RELOCATABLE",
+            "value": "y",
+            "reason": "rules KEEP. EFI_STUB을 끈 뒤에도 명시적으로 유지(kdump에 필요)",
+            "evidence": "rules KEEP"
+          },
+          {
+            "group": "x86",
+            "symbol": "RANDOMIZE_BASE",
+            "value": "n",
+            "reason": "crash kernel에는 불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "RANDOMIZE_MEMORY",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "IA32_EMULATION",
+            "value": "n",
+            "reason": "64bit static 앱만 실행",
+            "evidence": "명세"
+          },
+          {
+            "group": "x86",
+            "symbol": "COMPAT_32BIT_TIME",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "VIRTUALIZATION",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "x86",
+            "symbol": "ISA_DMA_API",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CPU_MITIGATIONS",
+            "value": "n",
+            "reason": "alternatives/thunk 패칭 시간과 크기를 줄임",
+            "evidence": "로그 공백 0.013->0.139, Spectre/ITS 줄"
+          },
+          {
+            "group": "mitig",
+            "symbol": "PAGE_TABLE_ISOLATION",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 Kernel/User page tables isolation"
+          },
+          {
+            "group": "mitig",
+            "symbol": "RETPOLINE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "RETHUNK",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CPU_UNRET_ENTRY",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CALL_DEPTH_TRACKING",
+            "value": "n",
+            "reason": "CALL_THUNKS/CALL_PADDING의 선택자",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CPU_IBPB_ENTRY",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CPU_IBRS_ENTRY",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "CPU_SRSO",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "MITIGATION_RFDS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "MITIGATION_SPECTRE_BHI",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mitig",
+            "symbol": "MITIGATION_ITS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 ITS: Mitigation"
+          },
+          {
+            "group": "mitig",
+            "symbol": "MITIGATION_TSA",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pm",
+            "symbol": "SUSPEND",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "명세"
+          },
+          {
+            "group": "pm",
+            "symbol": "PM_DEBUG",
+            "value": "n",
+            "reason": "디버그 기능",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pm",
+            "symbol": "PM_ADVANCED_DEBUG",
+            "value": "n",
+            "reason": "디버그 기능",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_SPCR_TABLE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_REV_OVERRIDE_POSSIBLE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_AC",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_BATTERY",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_BUTTON",
+            "value": "n",
+            "reason": "입력/전원 미사용. 선택자 DRM_I915는 끔",
+            "evidence": "로그 공백 0.894->0.927 Power Button"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_VIDEO",
+            "value": "n",
+            "reason": "선택자 DRM_I915는 끔",
+            "evidence": "지도 S<-DRM_I915"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_FAN",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_THERMAL",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "로그 thermal_sys"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_PROCESSOR",
+            "value": "n",
+            "reason": "cpufreq/idle 미사용. 선택자 X86_INTEL_PSTATE는 SCHED_MC_PRIO와 함께 꺼짐",
+            "evidence": "지도 S<-X86_INTEL_PSTATE"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_TABLE_UPGRADE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_PCC",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "ACPI_PRMT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "acpi",
+            "symbol": "X86_PM_TIMER",
+            "value": "n",
+            "reason": "acpi_pm clocksource 검증 시간 제거. HPET/TSC가 있음 (risk medium)",
+            "evidence": "로그 공백 0.726->0.749 acpi_pm"
+          },
+          {
+            "group": "pm",
+            "symbol": "CPU_FREQ",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "지도 S<-SCHED_MC_PRIO"
+          },
+          {
+            "group": "pm",
+            "symbol": "X86_INTEL_PSTATE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도"
+          },
+          {
+            "group": "pm",
+            "symbol": "X86_ACPI_CPUFREQ",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pm",
+            "symbol": "INTEL_IDLE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pm",
+            "symbol": "HALTPOLL_CPUIDLE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "KPROBES",
+            "value": "n",
+            "reason": "디버그·트레이스 미사용",
+            "evidence": "로그 공백 0.410 kprobes 직후"
+          },
+          {
+            "group": "sec",
+            "symbol": "SECCOMP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "sec",
+            "symbol": "STACKPROTECTOR",
+            "value": "n",
+            "reason": "크기·시간 감소",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "sec",
+            "symbol": "GCC_PLUGINS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "block",
+            "symbol": "BLOCK",
+            "value": "n",
+            "reason": "디스크·블록 미사용. initramfs는 BLOCK 없이도 동작",
+            "evidence": "명세 미사용, 지도 H needs EXPERT"
+          },
+          {
+            "group": "block",
+            "symbol": "BLK_DEV",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 brd, virtio_blk"
+          },
+          {
+            "group": "block",
+            "symbol": "BLK_DEV_RAM",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 공백 1.046->1.088 brd: module loaded"
+          },
+          {
+            "group": "block",
+            "symbol": "VIRTIO_BLK",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 virtio_blk"
+          },
+          {
+            "group": "block",
+            "symbol": "BLK_DEV_NVME",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "block",
+            "symbol": "ATA",
+            "value": "n",
+            "reason": "AHCI 6포트 probe 제거",
+            "evidence": "로그 ahci/ata1-6, t0→init 2.82s"
+          },
+          {
+            "group": "block",
+            "symbol": "SCSI",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 SCSI subsystem initialized"
+          },
+          {
+            "group": "block",
+            "symbol": "MD",
+            "value": "n",
+            "reason": "raid6/xor 벤치마크 제거",
+            "evidence": "로그 raid6 gen() 공백, xor 55ms"
+          },
+          {
+            "group": "block",
+            "symbol": "BLK_DEV_MD",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "block",
+            "symbol": "MD_RAID456",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "block",
+            "symbol": "BLK_DEV_DM",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "block",
+            "symbol": "DM_CRYPT",
+            "value": "n",
+            "reason": "CRYPTO 선택자",
+            "evidence": "불일치 CRYPTO"
+          },
+          {
+            "group": "lib",
+            "symbol": "RAID6_PQ_BENCHMARK",
+            "value": "n",
+            "reason": "벤치마크 제거",
+            "evidence": "로그 raid6"
+          },
+          {
+            "group": "mm",
+            "symbol": "SWAP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mm",
+            "symbol": "COMPACTION",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "mm",
+            "symbol": "BALLOON_COMPACTION",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "net",
+            "symbol": "NET",
+            "value": "n",
+            "reason": "네트워크 미사용. CRYPTO/FW_LOADER 등의 선택자 다수를 제거",
+            "evidence": "명세, 불일치 CRYPTO/FW_LOADER"
+          },
+          {
+            "group": "net",
+            "symbol": "NETDEVICES",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 e100/e1000/igb"
+          },
+          {
+            "group": "net",
+            "symbol": "WLAN",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "net",
+            "symbol": "BT",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 Bluetooth"
+          },
+          {
+            "group": "net",
+            "symbol": "CFG80211",
+            "value": "n",
+            "reason": "FW_LOADER 선택자",
+            "evidence": "불일치 FW_LOADER"
+          },
+          {
+            "group": "net",
+            "symbol": "MAC80211",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치 CRYPTO"
+          },
+          {
+            "group": "net",
+            "symbol": "RFKILL",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "net",
+            "symbol": "ISDN",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pci",
+            "symbol": "PCI_MSI",
+            "value": "n",
+            "reason": "사용하는 PCI 장치 없음",
+            "evidence": "기준 cfg, 지도 D"
+          },
+          {
+            "group": "pci",
+            "symbol": "PCIEPORTBUS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pci",
+            "symbol": "PCIEASPM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "pci",
+            "symbol": "PCI_IOV",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "pci",
+            "symbol": "HOTPLUG_PCI",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "DEVTMPFS_MOUNT",
+            "value": "n",
+            "reason": "앱이 직접 마운트함",
+            "evidence": "명세 계기판 앱"
+          },
+          {
+            "group": "drivers",
+            "symbol": "FW_LOADER",
+            "value": "n",
+            "reason": "선택자는 NET/SND와 함께 꺼짐",
+            "evidence": "불일치 FW_LOADER"
+          },
+          {
+            "group": "drivers",
+            "symbol": "FW_CACHE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "ALLOW_DEV_COREDUMP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "drivers",
+            "symbol": "FIRMWARE_MEMMAP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "drivers",
+            "symbol": "DMIID",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "PNP_DEBUG_MESSAGES",
+            "value": "n",
+            "reason": "디버그",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "EEPROM_AT24",
+            "value": "n",
+            "reason": "NVMEM 선택자",
+            "evidence": "불일치 NVMEM"
+          },
+          {
+            "group": "drivers",
+            "symbol": "RTC_CLASS",
+            "value": "n",
+            "reason": "rtc_cmos probe 시간 제거. RTC_NVMEM(NVMEM 선택자)도 함께 꺼짐",
+            "evidence": "로그 1.151~1.169 rtc_cmos, 불일치 NVMEM"
+          },
+          {
+            "group": "drivers",
+            "symbol": "RTC_NVMEM",
+            "value": "n",
+            "reason": "NVMEM 선택자",
+            "evidence": "불일치 NVMEM"
+          },
+          {
+            "group": "drivers",
+            "symbol": "NVMEM",
+            "value": "n",
+            "reason": "요청 유지",
+            "evidence": "불일치 NVMEM"
+          },
+          {
+            "group": "input",
+            "symbol": "INPUT",
+            "value": "n",
+            "reason": "입력 미사용. 선택자 VT/I915는 끔",
+            "evidence": "명세, 지도 S<-VT,DRM_I915"
+          },
+          {
+            "group": "input",
+            "symbol": "SERIO",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 i8042"
+          },
+          {
+            "group": "input",
+            "symbol": "KEYBOARD_ATKBD",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "input",
+            "symbol": "MOUSE_PS2",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "로그 mousedev"
+          },
+          {
+            "group": "input",
+            "symbol": "HID_SUPPORT",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "HW_RANDOM",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "DEVPORT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "HPET",
+            "value": "n",
+            "reason": "/dev/hpet 불필요(HPET_TIMER는 유지)",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "I2C",
+            "value": "n",
+            "reason": "선택자 DRM/IGB/MEDIA/I915는 끔",
+            "evidence": "지도 S"
+          },
+          {
+            "group": "drivers",
+            "symbol": "PTP_1588_CLOCK",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 PTP clock support"
+          },
+          {
+            "group": "drivers",
+            "symbol": "PPS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 pps_core"
+          },
+          {
+            "group": "drivers",
+            "symbol": "GPIOLIB",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "POWER_SUPPLY",
+            "value": "n",
+            "reason": "전원 관리 미사용",
+            "evidence": "지도 S"
+          },
+          {
+            "group": "drivers",
+            "symbol": "HWMON",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "THERMAL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 thermal_sys"
+          },
+          {
+            "group": "drivers",
+            "symbol": "WATCHDOG",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "MEDIA_SUPPORT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "SOUND",
+            "value": "n",
+            "reason": "사운드 미사용",
+            "evidence": "로그 ALSA"
+          },
+          {
+            "group": "drivers",
+            "symbol": "SND",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "USB_SUPPORT",
+            "value": "n",
+            "reason": "USB 미사용",
+            "evidence": "로그 usbcore"
+          },
+          {
+            "group": "drivers",
+            "symbol": "MMC",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "NEW_LEDS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 S"
+          },
+          {
+            "group": "drivers",
+            "symbol": "VIRTIO_MENU",
+            "value": "n",
+            "reason": "virtio 장치 미사용",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "VIRTIO_PCI",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "VIRTIO_BALLOON",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "VIRTIO_MMIO",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "VHOST_MENU",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "SURFACE_PLATFORMS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "drivers",
+            "symbol": "X86_PLATFORM_DEVICES",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 S<-DRM_I915"
+          },
+          {
+            "group": "drivers",
+            "symbol": "IOMMU_SUPPORT",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 iommu"
+          },
+          {
+            "group": "drivers",
+            "symbol": "IRQ_REMAP",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "EXT4_FS",
+            "value": "n",
+            "reason": "initramfs 외 파일시스템 미사용",
+            "evidence": "명세, 불일치 CRYPTO"
+          },
+          {
+            "group": "fs",
+            "symbol": "BTRFS_FS",
+            "value": "n",
+            "reason": "상동. RAID6/XOR 선택자",
+            "evidence": "로그 raid6/xor"
+          },
+          {
+            "group": "fs",
+            "symbol": "FS_ENCRYPTION",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치 CRYPTO"
+          },
+          {
+            "group": "fs",
+            "symbol": "DNOTIFY",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "INOTIFY_USER",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "AUTOFS_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "FUSE_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "OVERLAY_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "ISO9660_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "MSDOS_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "VFAT_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "PROC_KCORE",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "PROC_PAGE_MONITOR",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "fs",
+            "symbol": "TMPFS_POSIX_ACL",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "fs",
+            "symbol": "TMPFS_XATTR",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "기준 cfg"
+          },
+          {
+            "group": "fs",
+            "symbol": "EFIVAR_FS",
+            "value": "n",
+            "reason": "EFI 없음",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "MISC_FILESYSTEMS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "NETWORK_FILESYSTEMS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 RPC/NFS"
+          },
+          {
+            "group": "fs",
+            "symbol": "NFS_FS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 NFS id_resolver"
+          },
+          {
+            "group": "fs",
+            "symbol": "CIFS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 공백 0.827 cifs.idmap"
+          },
+          {
+            "group": "fs",
+            "symbol": "NLS_CODEPAGE_437",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "fs",
+            "symbol": "NLS_ISO8859_1",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "sec",
+            "symbol": "KEYS",
+            "value": "n",
+            "reason": "암호·키링 미사용",
+            "evidence": "로그 Key type ..., system trusted keyrings"
+          },
+          {
+            "group": "sec",
+            "symbol": "ENCRYPTED_KEYS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치 CRYPTO"
+          },
+          {
+            "group": "sec",
+            "symbol": "SECURITY",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 LSM landlock"
+          },
+          {
+            "group": "sec",
+            "symbol": "SECURITY_LANDLOCK",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "로그 landlock"
+          },
+          {
+            "group": "sec",
+            "symbol": "INTEGRITY",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "sec",
+            "symbol": "INIT_STACK_NONE",
+            "value": "y",
+            "reason": "CHOICE. 스택 zero-init 오버헤드 제거",
+            "evidence": "지도 INIT_STACK_ALL_ZERO C"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO",
+            "value": "n",
+            "reason": "선택자(NET/FS/DM/KEYS)를 모두 끔",
+            "evidence": "불일치 CRYPTO"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_HW",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_DEV_VIRTIO",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_USER_API_HASH",
+            "value": "n",
+            "reason": "CRYPTO_USER_API 선택자",
+            "evidence": "불일치 CRYPTO_USER_API"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_USER_API_SKCIPHER",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_USER_API_RNG",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_USER_API_AEAD",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "불일치"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_TEST",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_DES",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_MD4",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_CTS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "crypto",
+            "symbol": "CRYPTO_XTS",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "lib",
+            "symbol": "CRC8",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "SYMBOLIC_ERRNAME",
+            "value": "n",
+            "reason": "크기 축소",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "DEBUG_BUGVERBOSE",
+            "value": "n",
+            "reason": "크기 축소",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "debug",
+            "symbol": "MAGIC_SYSRQ",
+            "value": "n",
+            "reason": "복구 커널에서는 불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "DEBUG_FS",
+            "value": "n",
+            "reason": "디버그 미사용",
+            "evidence": "지도 S<-BLK_DEV_IO_TRACE"
+          },
+          {
+            "group": "debug",
+            "symbol": "SLUB_DEBUG",
+            "value": "n",
+            "reason": "디버그 미사용",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "debug",
+            "symbol": "DEBUG_MEMORY_INIT",
+            "value": "n",
+            "reason": "디버그 미사용",
+            "evidence": "지도 H"
+          },
+          {
+            "group": "debug",
+            "symbol": "KFENCE",
+            "value": "n",
+            "reason": "디버그 미사용",
+            "evidence": "로그 kfence: initialized"
+          },
+          {
+            "group": "debug",
+            "symbol": "FTRACE",
+            "value": "n",
+            "reason": "52299개 엔트리 할당과 패칭 제거",
+            "evidence": "로그 ftrace: allocating 52299 entries, 공백 0.013->0.139"
+          },
+          {
+            "group": "debug",
+            "symbol": "FUNCTION_TRACER",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "FUNCTION_GRAPH_TRACER",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "DYNAMIC_FTRACE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "FTRACE_SYSCALLS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "BLK_DEV_IO_TRACE",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "KPROBE_EVENTS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "UPROBE_EVENTS",
+            "value": "n",
+            "reason": "상동",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "X86_VERBOSE_BOOTUP",
+            "value": "n",
+            "reason": "출력 감소",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "RUNTIME_TESTING_MENU",
+            "value": "n",
+            "reason": "불필요",
+            "evidence": "지도 D"
+          },
+          {
+            "group": "debug",
+            "symbol": "UNWINDER_GUESS",
+            "value": "y",
+            "reason": "CHOICE. 프레임 포인터 오버헤드 제거 (risk low)",
+            "evidence": "지도 UNWINDER_FRAME_POINTER C"
+          }
+        ],
+        "cmdline": [
+          "console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 printk.devkmsg=on nr_cpus=1"
+        ],
+        "source_patch_needed": [
+          {
+            "symbol": "HPET_TIMER",
+            "reason": "needs=X86_32. x86_64에서는 cfg로 못 끔(필요하기도 함)"
+          },
+          {
+            "symbol": "CRYPTO_DRBG",
+            "reason": "DERIVED. CRYPTO=n이 되면 자동으로 사라짐. 남으면 소스 수정 필요"
+          },
+          {
+            "symbol": "STRICT_KERNEL_RWX",
+            "reason": "needs ARCH_OPTIONAL_KERNEL_RWX. x86에서 고정됨"
+          }
+        ]
+      },
+      "name": "submit",
+      "type": "tool_use",
+      "toolset_name": null
+    }
+  ],
+  "diagnostics": null,
+  "model": "claude-opus-5-5",
+  "role": "assistant",
+  "stop_details": null,
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "type": "message",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 2268
+    },
+    "cache_creation_input_tokens": 2268,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 83270,
+    "output_tokens": 25964,
+    "output_tokens_details": {
+      "thinking_tokens": 9012
+    },
+    "server_tool_use": null,
+    "service_tier": "standard",
+    "speed": "standard"
+  }
+}

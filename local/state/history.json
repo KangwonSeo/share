@@ -1,0 +1,1220 @@
+[
+  {
+    "iter": 0,
+    "origin": "baseline",
+    "changes": [],
+    "verdict": "baseline",
+    "median": 3.996,
+    "ksize": 15897600
+  },
+  {
+    "iter": 1,
+    "origin": "initial",
+    "changes": [
+      {
+        "symbol": "EXPERT",
+        "value": "y"
+      },
+      {
+        "symbol": "DRM",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_I915",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_VIRTIO_GPU",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_BOCHS",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_CIRRUS_QEMU",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_SIMPLEDRM",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_KMS_HELPER",
+        "value": "n"
+      },
+      {
+        "symbol": "DRM_FBDEV_EMULATION",
+        "value": "n"
+      },
+      {
+        "symbol": "FB_SIMPLE",
+        "value": "y"
+      },
+      {
+        "symbol": "FB_VESA",
+        "value": "n"
+      },
+      {
+        "symbol": "FB_EFI",
+        "value": "n"
+      },
+      {
+        "symbol": "FB_MODE_HELPERS",
+        "value": "n"
+      },
+      {
+        "symbol": "FB_SYSMEM_HELPERS_DEFERRED",
+        "value": "n"
+      },
+      {
+        "symbol": "FB_DEFERRED_IO",
+        "value": "n"
+      },
+      {
+        "symbol": "USB_GSPCA",
+        "value": "n"
+      },
+      {
+        "symbol": "USB_PWC",
+        "value": "n"
+      },
+      {
+        "symbol": "USB_S2255",
+        "value": "n"
+      },
+      {
+        "symbol": "USB_VIDEO_CLASS",
+        "value": "n"
+      },
+      {
+        "symbol": "VIDEOBUF2_VMALLOC",
+        "value": "n"
+      },
+      {
+        "symbol": "VIDEOBUF2_CORE",
+        "value": "n"
+      },
+      {
+        "symbol": "SYNC_FILE",
+        "value": "n"
+      },
+      {
+        "symbol": "DMA_SHARED_BUFFER",
+        "value": "n"
+      },
+      {
+        "symbol": "AGP",
+        "value": "n"
+      },
+      {
+        "symbol": "VGA_ARB",
+        "value": "n"
+      },
+      {
+        "symbol": "VT",
+        "value": "n"
+      },
+      {
+        "symbol": "VT_CONSOLE",
+        "value": "n"
+      },
+      {
+        "symbol": "FRAMEBUFFER_CONSOLE",
+        "value": "n"
+      },
+      {
+        "symbol": "VGA_CONSOLE",
+        "value": "n"
+      },
+      {
+        "symbol": "UNIX98_PTYS",
+        "value": "n"
+      },
+      {
+        "symbol": "LEGACY_TIOCSTI",
+        "value": "n"
+      },
+      {
+        "symbol": "LDISC_AUTOLOAD",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_DEPRECATED_OPTIONS",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_PCI",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_EXAR",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_LPSS",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_MID",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIAL_8250_PERICOM",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_CONSOLE",
+        "value": "n"
+      },
+      {
+        "symbol": "SYSVIPC",
+        "value": "n"
+      },
+      {
+        "symbol": "POSIX_MQUEUE",
+        "value": "n"
+      },
+      {
+        "symbol": "CROSS_MEMORY_ATTACH",
+        "value": "n"
+      },
+      {
+        "symbol": "BPF_SYSCALL",
+        "value": "n"
+      },
+      {
+        "symbol": "BPF_JIT",
+        "value": "n"
+      },
+      {
+        "symbol": "PREEMPT_DYNAMIC",
+        "value": "n"
+      },
+      {
+        "symbol": "PREEMPT_NONE",
+        "value": "y"
+      },
+      {
+        "symbol": "BSD_PROCESS_ACCT",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_ISOLATION",
+        "value": "n"
+      },
+      {
+        "symbol": "IKCONFIG",
+        "value": "n"
+      },
+      {
+        "symbol": "CGROUPS",
+        "value": "n"
+      },
+      {
+        "symbol": "NAMESPACES",
+        "value": "n"
+      },
+      {
+        "symbol": "CHECKPOINT_RESTORE",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_GZIP",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_BZIP2",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_LZMA",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_XZ",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_LZO",
+        "value": "n"
+      },
+      {
+        "symbol": "RD_ZSTD",
+        "value": "n"
+      },
+      {
+        "symbol": "INITRAMFS_PRESERVE_MTIME",
+        "value": "n"
+      },
+      {
+        "symbol": "UID16",
+        "value": "n"
+      },
+      {
+        "symbol": "SGETMASK_SYSCALL",
+        "value": "n"
+      },
+      {
+        "symbol": "SYSFS_SYSCALL",
+        "value": "n"
+      },
+      {
+        "symbol": "FHANDLE",
+        "value": "n"
+      },
+      {
+        "symbol": "ELF_CORE",
+        "value": "n"
+      },
+      {
+        "symbol": "COREDUMP",
+        "value": "n"
+      },
+      {
+        "symbol": "PCSPKR_PLATFORM",
+        "value": "n"
+      },
+      {
+        "symbol": "AIO",
+        "value": "n"
+      },
+      {
+        "symbol": "IO_URING",
+        "value": "n"
+      },
+      {
+        "symbol": "CACHESTAT_SYSCALL",
+        "value": "n"
+      },
+      {
+        "symbol": "KPROBES",
+        "value": "n"
+      },
+      {
+        "symbol": "FUNCTION_TRACER",
+        "value": "n"
+      },
+      {
+        "symbol": "FTRACE_SYSCALLS",
+        "value": "n"
+      },
+      {
+        "symbol": "KALLSYMS",
+        "value": "n"
+      },
+      {
+        "symbol": "BINFMT_ELF",
+        "value": "y"
+      },
+      {
+        "symbol": "BINFMT_SCRIPT",
+        "value": "n"
+      },
+      {
+        "symbol": "BINFMT_MISC",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_MPPARSE",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_EXTENDED_PLATFORM",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_AMD_PLATFORM_DEVICE",
+        "value": "n"
+      },
+      {
+        "symbol": "HYPERVISOR_GUEST",
+        "value": "n"
+      },
+      {
+        "symbol": "PARAVIRT",
+        "value": "n"
+      },
+      {
+        "symbol": "KVM_GUEST",
+        "value": "n"
+      },
+      {
+        "symbol": "PROCESSOR_SELECT",
+        "value": "y"
+      },
+      {
+        "symbol": "CPU_SUP_HYGON",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_SUP_AMD",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_SUP_CENTAUR",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_SUP_ZHAOXIN",
+        "value": "n"
+      },
+      {
+        "symbol": "SCHED_MC_PRIO",
+        "value": "n"
+      },
+      {
+        "symbol": "SCHED_MC",
+        "value": "n"
+      },
+      {
+        "symbol": "SCHED_CLUSTER",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_MCE",
+        "value": "n"
+      },
+      {
+        "symbol": "PERF_EVENTS_INTEL_UNCORE",
+        "value": "n"
+      },
+      {
+        "symbol": "PERF_EVENTS_INTEL_RAPL",
+        "value": "n"
+      },
+      {
+        "symbol": "PERF_EVENTS_INTEL_CSTATE",
+        "value": "n"
+      },
+      {
+        "symbol": "PERF_EVENTS_AMD_UNCORE",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_16BIT",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_VSYSCALL_EMULATION",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_IOPL_IOPERM",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_MSR",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_CPUID",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_5LEVEL",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_CHECK_BIOS_CORRUPTION",
+        "value": "n"
+      },
+      {
+        "symbol": "MTRR_SANITIZER",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_KERNEL_IBT",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_INTEL_MEMORY_PROTECTION_KEYS",
+        "value": "n"
+      },
+      {
+        "symbol": "MODIFY_LDT_SYSCALL",
+        "value": "n"
+      },
+      {
+        "symbol": "EFI",
+        "value": "n"
+      },
+      {
+        "symbol": "EFI_STUB",
+        "value": "n"
+      },
+      {
+        "symbol": "RELOCATABLE",
+        "value": "y"
+      },
+      {
+        "symbol": "RANDOMIZE_BASE",
+        "value": "n"
+      },
+      {
+        "symbol": "RANDOMIZE_MEMORY",
+        "value": "n"
+      },
+      {
+        "symbol": "IA32_EMULATION",
+        "value": "n"
+      },
+      {
+        "symbol": "COMPAT_32BIT_TIME",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTUALIZATION",
+        "value": "n"
+      },
+      {
+        "symbol": "ISA_DMA_API",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_MITIGATIONS",
+        "value": "n"
+      },
+      {
+        "symbol": "PAGE_TABLE_ISOLATION",
+        "value": "n"
+      },
+      {
+        "symbol": "RETPOLINE",
+        "value": "n"
+      },
+      {
+        "symbol": "RETHUNK",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_UNRET_ENTRY",
+        "value": "n"
+      },
+      {
+        "symbol": "CALL_DEPTH_TRACKING",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_IBPB_ENTRY",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_IBRS_ENTRY",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_SRSO",
+        "value": "n"
+      },
+      {
+        "symbol": "MITIGATION_RFDS",
+        "value": "n"
+      },
+      {
+        "symbol": "MITIGATION_SPECTRE_BHI",
+        "value": "n"
+      },
+      {
+        "symbol": "MITIGATION_ITS",
+        "value": "n"
+      },
+      {
+        "symbol": "MITIGATION_TSA",
+        "value": "n"
+      },
+      {
+        "symbol": "SUSPEND",
+        "value": "n"
+      },
+      {
+        "symbol": "PM_DEBUG",
+        "value": "n"
+      },
+      {
+        "symbol": "PM_ADVANCED_DEBUG",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_SPCR_TABLE",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_REV_OVERRIDE_POSSIBLE",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_AC",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_BATTERY",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_BUTTON",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_VIDEO",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_FAN",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_THERMAL",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_INTEL_PSTATE",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_PROCESSOR",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_TABLE_UPGRADE",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_PCC",
+        "value": "n"
+      },
+      {
+        "symbol": "ACPI_PRMT",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_PM_TIMER",
+        "value": "n"
+      },
+      {
+        "symbol": "CPU_FREQ",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_ACPI_CPUFREQ",
+        "value": "n"
+      },
+      {
+        "symbol": "INTEL_IDLE",
+        "value": "n"
+      },
+      {
+        "symbol": "HALTPOLL_CPUIDLE",
+        "value": "n"
+      },
+      {
+        "symbol": "SECCOMP",
+        "value": "n"
+      },
+      {
+        "symbol": "STACKPROTECTOR",
+        "value": "n"
+      },
+      {
+        "symbol": "GCC_PLUGINS",
+        "value": "n"
+      },
+      {
+        "symbol": "BLOCK",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV_RAM",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_BLK",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV_NVME",
+        "value": "n"
+      },
+      {
+        "symbol": "ATA",
+        "value": "n"
+      },
+      {
+        "symbol": "SCSI",
+        "value": "n"
+      },
+      {
+        "symbol": "MD",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV_MD",
+        "value": "n"
+      },
+      {
+        "symbol": "MD_RAID456",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV_DM",
+        "value": "n"
+      },
+      {
+        "symbol": "DM_CRYPT",
+        "value": "n"
+      },
+      {
+        "symbol": "RAID6_PQ_BENCHMARK",
+        "value": "n"
+      },
+      {
+        "symbol": "SWAP",
+        "value": "n"
+      },
+      {
+        "symbol": "COMPACTION",
+        "value": "n"
+      },
+      {
+        "symbol": "BALLOON_COMPACTION",
+        "value": "n"
+      },
+      {
+        "symbol": "NET",
+        "value": "n"
+      },
+      {
+        "symbol": "NETDEVICES",
+        "value": "n"
+      },
+      {
+        "symbol": "WLAN",
+        "value": "n"
+      },
+      {
+        "symbol": "BT",
+        "value": "n"
+      },
+      {
+        "symbol": "CFG80211",
+        "value": "n"
+      },
+      {
+        "symbol": "MAC80211",
+        "value": "n"
+      },
+      {
+        "symbol": "RFKILL",
+        "value": "n"
+      },
+      {
+        "symbol": "ISDN",
+        "value": "n"
+      },
+      {
+        "symbol": "PCI_MSI",
+        "value": "n"
+      },
+      {
+        "symbol": "PCIEPORTBUS",
+        "value": "n"
+      },
+      {
+        "symbol": "PCIEASPM",
+        "value": "n"
+      },
+      {
+        "symbol": "PCI_IOV",
+        "value": "n"
+      },
+      {
+        "symbol": "HOTPLUG_PCI",
+        "value": "n"
+      },
+      {
+        "symbol": "DEVTMPFS_MOUNT",
+        "value": "n"
+      },
+      {
+        "symbol": "BNX2X",
+        "value": "n"
+      },
+      {
+        "symbol": "BNXT",
+        "value": "n"
+      },
+      {
+        "symbol": "R8169",
+        "value": "n"
+      },
+      {
+        "symbol": "BRCMSMAC",
+        "value": "n"
+      },
+      {
+        "symbol": "BRCMFMAC_SDIO",
+        "value": "n"
+      },
+      {
+        "symbol": "BRCMFMAC_USB",
+        "value": "n"
+      },
+      {
+        "symbol": "BRCMFMAC_PCIE",
+        "value": "n"
+      },
+      {
+        "symbol": "RT2800PCI",
+        "value": "n"
+      },
+      {
+        "symbol": "RT2X00_LIB_FIRMWARE",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_CA0132_DSP",
+        "value": "n"
+      },
+      {
+        "symbol": "FW_LOADER",
+        "value": "n"
+      },
+      {
+        "symbol": "FW_CACHE",
+        "value": "n"
+      },
+      {
+        "symbol": "ALLOW_DEV_COREDUMP",
+        "value": "n"
+      },
+      {
+        "symbol": "FIRMWARE_MEMMAP",
+        "value": "n"
+      },
+      {
+        "symbol": "DMIID",
+        "value": "n"
+      },
+      {
+        "symbol": "PNP_DEBUG_MESSAGES",
+        "value": "n"
+      },
+      {
+        "symbol": "EEPROM_AT24",
+        "value": "n"
+      },
+      {
+        "symbol": "RTC_CLASS",
+        "value": "n"
+      },
+      {
+        "symbol": "RTC_NVMEM",
+        "value": "n"
+      },
+      {
+        "symbol": "NVMEM",
+        "value": "n"
+      },
+      {
+        "symbol": "INPUT",
+        "value": "n"
+      },
+      {
+        "symbol": "KEYBOARD_ATKBD",
+        "value": "n"
+      },
+      {
+        "symbol": "MOUSE_PS2",
+        "value": "n"
+      },
+      {
+        "symbol": "SERIO",
+        "value": "n"
+      },
+      {
+        "symbol": "HID_SUPPORT",
+        "value": "n"
+      },
+      {
+        "symbol": "HW_RANDOM",
+        "value": "n"
+      },
+      {
+        "symbol": "DEVPORT",
+        "value": "n"
+      },
+      {
+        "symbol": "HPET",
+        "value": "n"
+      },
+      {
+        "symbol": "IGB",
+        "value": "n"
+      },
+      {
+        "symbol": "MEDIA_SUBDRV_AUTOSELECT",
+        "value": "n"
+      },
+      {
+        "symbol": "I2C",
+        "value": "n"
+      },
+      {
+        "symbol": "PTP_1588_CLOCK",
+        "value": "n"
+      },
+      {
+        "symbol": "PPS",
+        "value": "n"
+      },
+      {
+        "symbol": "GPIOLIB",
+        "value": "n"
+      },
+      {
+        "symbol": "HID_WACOM",
+        "value": "n"
+      },
+      {
+        "symbol": "POWER_SUPPLY",
+        "value": "n"
+      },
+      {
+        "symbol": "HWMON",
+        "value": "n"
+      },
+      {
+        "symbol": "THERMAL",
+        "value": "n"
+      },
+      {
+        "symbol": "WATCHDOG",
+        "value": "n"
+      },
+      {
+        "symbol": "MEDIA_SUPPORT",
+        "value": "n"
+      },
+      {
+        "symbol": "SOUND",
+        "value": "n"
+      },
+      {
+        "symbol": "SND",
+        "value": "n"
+      },
+      {
+        "symbol": "USB_SUPPORT",
+        "value": "n"
+      },
+      {
+        "symbol": "MMC",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_REALTEK",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_ANALOG",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_SIGMATEL",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_CIRRUS",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_CONEXANT",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_CA0110",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_CODEC_CMEDIA",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_HDA_GENERIC",
+        "value": "n"
+      },
+      {
+        "symbol": "SND_CTL_LED",
+        "value": "n"
+      },
+      {
+        "symbol": "NEW_LEDS",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_MENU",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_PCI",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_BALLOON",
+        "value": "n"
+      },
+      {
+        "symbol": "VIRTIO_MMIO",
+        "value": "n"
+      },
+      {
+        "symbol": "VHOST_MENU",
+        "value": "n"
+      },
+      {
+        "symbol": "SURFACE_PLATFORMS",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_PLATFORM_DEVICES",
+        "value": "n"
+      },
+      {
+        "symbol": "IOMMU_SUPPORT",
+        "value": "n"
+      },
+      {
+        "symbol": "IRQ_REMAP",
+        "value": "n"
+      },
+      {
+        "symbol": "EXT4_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "BTRFS_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "FS_ENCRYPTION",
+        "value": "n"
+      },
+      {
+        "symbol": "DNOTIFY",
+        "value": "n"
+      },
+      {
+        "symbol": "INOTIFY_USER",
+        "value": "n"
+      },
+      {
+        "symbol": "AUTOFS_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "FUSE_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "OVERLAY_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "ISO9660_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "MSDOS_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "VFAT_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "PROC_KCORE",
+        "value": "n"
+      },
+      {
+        "symbol": "PROC_PAGE_MONITOR",
+        "value": "n"
+      },
+      {
+        "symbol": "TMPFS_POSIX_ACL",
+        "value": "n"
+      },
+      {
+        "symbol": "TMPFS_XATTR",
+        "value": "n"
+      },
+      {
+        "symbol": "EFIVAR_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "MISC_FILESYSTEMS",
+        "value": "n"
+      },
+      {
+        "symbol": "NETWORK_FILESYSTEMS",
+        "value": "n"
+      },
+      {
+        "symbol": "NFS_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "CIFS",
+        "value": "n"
+      },
+      {
+        "symbol": "NLS_CODEPAGE_437",
+        "value": "n"
+      },
+      {
+        "symbol": "NLS_ISO8859_1",
+        "value": "n"
+      },
+      {
+        "symbol": "ENCRYPTED_KEYS",
+        "value": "n"
+      },
+      {
+        "symbol": "SECURITY",
+        "value": "n"
+      },
+      {
+        "symbol": "SECURITY_LANDLOCK",
+        "value": "n"
+      },
+      {
+        "symbol": "INTEGRITY",
+        "value": "n"
+      },
+      {
+        "symbol": "INIT_STACK_NONE",
+        "value": "y"
+      },
+      {
+        "symbol": "CRYPTO_HW",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_DEV_VIRTIO",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_USER_API_HASH",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_USER_API_SKCIPHER",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_USER_API_RNG",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_USER_API_AEAD",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_TEST",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_DES",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_MD4",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_CTS",
+        "value": "n"
+      },
+      {
+        "symbol": "CRYPTO_XTS",
+        "value": "n"
+      },
+      {
+        "symbol": "CRC8",
+        "value": "n"
+      },
+      {
+        "symbol": "SYMBOLIC_ERRNAME",
+        "value": "n"
+      },
+      {
+        "symbol": "DEBUG_BUGVERBOSE",
+        "value": "n"
+      },
+      {
+        "symbol": "MAGIC_SYSRQ",
+        "value": "n"
+      },
+      {
+        "symbol": "BLK_DEV_IO_TRACE",
+        "value": "n"
+      },
+      {
+        "symbol": "DEBUG_FS",
+        "value": "n"
+      },
+      {
+        "symbol": "SLUB_DEBUG",
+        "value": "n"
+      },
+      {
+        "symbol": "DEBUG_MEMORY_INIT",
+        "value": "n"
+      },
+      {
+        "symbol": "KFENCE",
+        "value": "n"
+      },
+      {
+        "symbol": "FTRACE",
+        "value": "n"
+      },
+      {
+        "symbol": "FUNCTION_GRAPH_TRACER",
+        "value": "n"
+      },
+      {
+        "symbol": "DYNAMIC_FTRACE",
+        "value": "n"
+      },
+      {
+        "symbol": "KPROBE_EVENTS",
+        "value": "n"
+      },
+      {
+        "symbol": "UPROBE_EVENTS",
+        "value": "n"
+      },
+      {
+        "symbol": "X86_VERBOSE_BOOTUP",
+        "value": "n"
+      },
+      {
+        "symbol": "RUNTIME_TESTING_MENU",
+        "value": "n"
+      },
+      {
+        "symbol": "UNWINDER_GUESS",
+        "value": "y"
+      }
+    ],
+    "cfg_sha": "4ebaaf9c5802141d",
+    "ksize": 2401280,
+    "median": 0.963,
+    "verdict": "accepted"
+  }
+]

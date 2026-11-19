@@ -1,0 +1,20 @@
+# Claude API
+# API 키 파일 (비우면 ~/.claude_api_key, 없으면 첫 실행 때 입력받아 저장)
+API_KEY_FILE=
+MODEL=claude-opus-5-5
+MAX_TOKENS=32000
+
+# 루프 제어
+TARGET_SEC=1.0
+REGRESSION_TOL_SEC=0.03
+MAX_CHANGES=15
+NO_IMPROVE_LIMIT=3
+
+# 근거 정리
+MIN_GAP_SEC=0.02
+LOG_MAX_LINES=400
+
+# 시험용: true면 프롬프트만 만들고 API 호출 안 함
+DRY_RUN=false
+# 시험용: API 대신 이 JSON 파일을 응답으로 사용 (비우면 실제 API 호출)
+MOCK_RESPONSE=

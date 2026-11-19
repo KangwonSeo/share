@@ -1,0 +1,2258 @@
+너는 리눅스 커널 부팅 시간 최적화 전문가다.
+목표: kexec crash kernel(복구 커널)이 패닉 후 initramfs의 계기판 앱(rdinit)을 실행해 첫 화면을 그릴 때까지의 시간을 최소화한다.
+
+근거 사용 규칙:
+- 입력의 측정값·로그 공백·끄기 가능성 지도·불일치 목록은 스크립트가 계산한 사실이다. 추측보다 우선한다.
+- 모든 변경에는 근거(evidence)를 단다: 로그 줄, 로그 공백 구간, 지도 항목, 불일치 항목, 명세 항목 중 하나.
+- 끄기 가능성 지도에서:
+  DIRECT=바로 끌 수 있음 / SELECTED=selector(<-)를 먼저 꺼야 함 / HIDDEN=needs의 심볼(예: EXPERT)을 켜야 끌 수 있음 /
+  DERIVED=프롬프트 없음, cfg로 직접 못 끔(조건 심볼을 끄거나 source_patch_needed로 보고) / CHOICE=다른 멤버를 y로.
+- 규칙(rules.txt)의 KEEP은 절대 끄지 않고, OFF는 절대 켜지 않으며, BAN 값은 쓰지 않는다.
+- 이력에서 실패한 변경은 다시 제안하지 않는다.
+- 확실하지 않으면 risk를 high로 표시한다.
+- 결과는 반드시 submit 도구로 제출한다.
+
+[명세]
+[목표]
+- 정상 커널 패닉 → kexec crash kernel(복구 커널) 부팅 → initramfs의 계기판 앱이 첫 화면을 그릴 때까지 1.0초 이내
+- 측정 종점: 커널 로그의 "[cluster] first frame done"
+- 우선순위: 시간 단축 > 커널 크기 축소 (둘 다 줄수록 좋음. 커널이 작을수록 패닉→t0 구간도 짧아짐)
+
+[환경]
+- x86_64, QEMU q35 (TCG), -vga std, SeaBIOS, 메모리 2GB, 복구 커널 예약 128MB
+- linux-yocto 6.6, Yocto 빌드
+- cfg 적용 방식: Yocto 기본 커널 설정 위에 cfg를 merge_config.sh로 마지막에 병합
+  → allnoconfig가 아니므로, 끌 옵션은 모두 '# CONFIG_X is not set'으로 명시해야 함
+
+[부팅 방식]
+- 정상 커널 부팅 스크립트가 kexec -p로 복구 커널 + initramfs를 미리 적재
+- 커맨드라인: console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 printk.devkmsg=on
+- 복구 커널은 SMP가 필요 없음 (CPU 1개로 충분)
+
+[계기판 앱 요구]
+- static ELF 바이너리, PID 1로 직접 실행 (셸 없음)
+- 스스로 devtmpfs를 /dev에 마운트
+- /dev/fb0를 open + ioctl(FBIOGET_*SCREENINFO) + mmap 해서 직접 픽셀 기록
+- /dev/kmsg로 로그 출력
+- 첫 화면 후 무한 대기 (종료하지 않음)
+
+[디스플레이]
+- 승계 방식: 정상 커널(VESA)이 쓰던 프레임버퍼를 그대로 사용
+  kexec-tools가 전달한 screen_info → sysfb → simple-framebuffer → /dev/fb0 (1024x768x32, 0xfd000000)
+- 디스플레이 재초기화 금지 (DRM, VESA/EFI fb 드라이버 사용 금지), 콘솔이 화면을 덮어쓰면 안 됨
+
+[복구 시점에 사용하지 않음]
+- 디스크·블록 장치, 네트워크, USB, 사운드, 입력 장치, 파일시스템(initramfs 외), 암호·키링, 컨테이너 기능, 전원 관리, 디버그·트레이스 기능
+- 단, 시리얼 콘솔(ttyS0, 0x3f8)과 printk 타임스탬프는 측정에 필요하므로 유지
+
+[모름]
+- 이후 단계(hand-over)에서 필요한 커널 기능: 모름
+- 실제 HW(ARM SoC) 보드 및 디스플레이 드라이버: 모름
+
+
+[규칙 rules.txt]
+# 결정적 검사 규칙 (LLM 응답에서 위반 항목은 자동 제거)
+# KEEP CONFIG_X=값 : 반드시 이 값 유지
+# OFF  CONFIG_X    : 반드시 꺼짐 (켜는 제안 제거)
+# BAN  CONFIG_X=값 : 이 값은 쓰지 않음 (확인된 실패)
+
+# --- 반드시 유지 ---
+KEEP CONFIG_64BIT=y
+KEEP CONFIG_RELOCATABLE=y
+KEEP CONFIG_ACPI=y            # x86에서 끄면 부팅 불안정
+KEEP CONFIG_PCI=y             # ACPI 동작에 필요
+KEEP CONFIG_BLK_DEV_INITRD=y
+KEEP CONFIG_RD_LZ4=y
+KEEP CONFIG_KERNEL_LZ4=y
+KEEP CONFIG_SYSFB=y
+KEEP CONFIG_SYSFB_SIMPLEFB=y
+KEEP CONFIG_FB=y
+KEEP CONFIG_FB_DEVICE=y
+KEEP CONFIG_FB_SIMPLE=y
+KEEP CONFIG_DEVTMPFS=y
+KEEP CONFIG_PROC_FS=y
+KEEP CONFIG_SYSFS=y
+KEEP CONFIG_TMPFS=y
+KEEP CONFIG_BINFMT_ELF=y
+KEEP CONFIG_TTY=y
+KEEP CONFIG_SERIAL_8250=y
+KEEP CONFIG_SERIAL_8250_CONSOLE=y
+KEEP CONFIG_PRINTK=y
+KEEP CONFIG_PRINTK_TIME=y
+KEEP CONFIG_MODULES=y         # 이후 드라이버 점진 복원 계획
+
+# --- 반드시 끔 ---
+OFF CONFIG_DRM                # 디스플레이 재초기화
+OFF CONFIG_VT                 # 계기판 화면을 덮어씀
+OFF CONFIG_FRAMEBUFFER_CONSOLE
+OFF CONFIG_FB_VESA            # simplefb와 충돌
+OFF CONFIG_FB_EFI
+
+# --- 확인된 실패 ---
+BAN CONFIG_SERIAL_8250_NR_UARTS=1          # ttyS0이 0x2f8에 붙어 시리얼 출력이 사라짐
+BAN CONFIG_SERIAL_8250_RUNTIME_UARTS=1
+
+
+[금지 목록 (실패 확정)]
+없음
+
+[이력]
+반복 | 출처 | 변경 수 | 판정 | 패닉→첫 화면 | 커널 bytes | 비고
+0 | baseline | 0 | baseline | 3.996 | 15897600 | 
+
+[기준 cfg (Yocto 기본 위에 적용된 항목)]
+#
+# Recovery kernel framebuffer support for existing QEMU display
+#
+
+#
+# Initramfs support
+#
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_INITRAMFS_SOURCE=""
+CONFIG_RD_LZ4=y
+CONFIG_DECOMPRESS_LZ4=y
+CONFIG_KERNEL_LZ4=y
+
+#
+# dev/proc/sysfs
+#
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+CONFIG_PROC_FS=y
+CONFIG_SYSFS=y
+CONFIG_TMPFS=y
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_TMPFS_XATTR=y
+
+#
+# PCI support - required for QEMU VGA/Bochs display device
+#
+CONFIG_PCI=y
+CONFIG_PCI_MSI=y
+CONFIG_HAS_IOMEM=y
+
+#
+# DMA buffer support
+#
+CONFIG_DMA_SHARED_BUFFER=y
+
+#
+# Firmware/sysfb fallback
+#
+CONFIG_SYSFB=y
+CONFIG_SYSFB_SIMPLEFB=y
+
+#
+# Framebuffer core
+#
+CONFIG_FB=y
+CONFIG_FB_CORE=y
+CONFIG_FB_DEVICE=y
+CONFIG_FB_DEFERRED_IO=y
+
+#
+# Legacy QEMU VGA framebuffer drivers
+#
+CONFIG_FB_VESA=y
+CONFIG_FB_EFI=y
+CONFIG_FB_SIMPLE=y
+
+#
+# DRM core and fbdev emulation
+#
+CONFIG_DRM=y
+CONFIG_DRM_KMS_HELPER=y
+CONFIG_DRM_FBDEV_EMULATION=y
+CONFIG_DRM_FBDEV_OVERALLOC=100
+
+#
+# QEMU standard VGA / Bochs DRM driver
+# This is the important one for QEMU default/std VGA.
+#
+CONFIG_DRM_BOCHS=y
+
+#
+# SimpleDRM fallback
+#
+CONFIG_DRM_SIMPLEDRM=y
+
+#
+# Console support
+#
+CONFIG_VT=y
+CONFIG_VT_CONSOLE=y
+CONFIG_HW_CONSOLE=y
+CONFIG_DUMMY_CONSOLE=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+
+#
+# Existing reductions
+#
+# CONFIG_FW_LOADER is not set
+# CONFIG_NVMEM is not set
+# CONFIG_CONNECTOR is not set
+# CONFIG_PROC_EVENTS is not set
+# CONFIG_TASKSTATS is not set
+
+# CONFIG_BLK_DEV_FD is not set
+# CONFIG_PARPORT is not set
+# CONFIG_PARPORT_PC is not set
+# CONFIG_PRINTER is not set
+
+# CONFIG_UNIX98_PTYS is not set
+# CONFIG_LEGACY_PTYS is not set
+
+# CONFIG_CRYPTO is not set
+# CONFIG_CRYPTO_JITTERENTROPY is not set
+# CONFIG_CRYPTO_DRBG is not set
+# CONFIG_CRYPTO_USER_API is not set
+# CONFIG_AF_ALG is not set
+
+# CONFIG_BLK_DEV_NBD is not set
+# CONFIG_SCSI_DEBUG is not set
+# CONFIG_BLK_DEV_LOOP is not set
+
+
+[측정]
+상태: 성공
+패닉→첫 화면 중앙값: 3.996초
+  패닉→t0 1.521 / t0→init 2.82 / init→화면 0.06
+커널 이미지: 15897600 bytes
+  회차 1: ok 3.996초
+  회차 2: ok 3.802초
+  회차 3: ok 5.961초
+
+[로그 공백 (복구 커널, 커널 시간)]
+0.013->0.139 (126ms)
+  직전: [    0.013150] x86/fpu: Enabled xstate features 0x7, context size is 832 bytes, using 'standard' format.
+  직후: [    0.138802] Freeing SMP alternatives memory: 52K
+0.150->0.286 (136ms)
+  직전: [    0.149558] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+  직후: [    0.285675] smpboot: CPU0: Intel Xeon E3-12xx v2 (Ivy Bridge) (family: 0x6, model: 0x3a, stepping: 0x9)
+0.340->0.362 (22ms)
+  직전: [    0.340170] smpboot: Total of 4 processors activated (28780.83 BogoMIPS)
+  직후: [    0.361899] devtmpfs: initialized
+0.410->0.441 (31ms)
+  직전: [    0.409785] kprobes: kprobe jump-optimization is enabled. All kprobes are optimized if possible.
+  직후: [    0.440771] raid6: sse2x4   gen()  1746 MB/s
+0.495->0.520 (25ms)
+  직전: [    0.494939] ACPI: Added _OSI(Processor Aggregator Device)
+  직후: [    0.520129] ACPI: 1 ACPI AML tables successfully acquired and loaded
+0.520->0.542 (22ms)
+  직전: [    0.520129] ACPI: 1 ACPI AML tables successfully acquired and loaded
+  직후: [    0.542464] ACPI: _OSC evaluation for CPUs failed, trying _PDC
+0.550->0.575 (26ms)
+  직전: [    0.549675] ACPI: Enabled 2 GPEs in block 00 to 3F
+  직후: [    0.575337] ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00-ff])
+0.726->0.749 (23ms)
+  직전: [    0.726078] pnp: PnP ACPI: found 5 devices
+  직후: [    0.749403] clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+0.796->0.819 (22ms)
+  직전: [    0.796064] RAPL PMU: API unit is 2^-32 Joules, 0 fixed counters, 10737418240 ms ovfl timer
+  직후: [    0.818519] Initialise system trusted keyrings
+0.827->0.882 (55ms)
+  직전: [    0.826936] Key type cifs.idmap registered
+  직후: [    0.882073] xor: automatically using best checksumming function   avx       
+0.894->0.927 (33ms)
+  직전: [    0.893997] ACPI: button: Power Button [PWRF]
+  직후: [    0.926610] Freeing initrd memory: 5188K
+0.945->0.967 (22ms)
+  직전: [    0.944748] 00:02: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+  직후: [    0.967007] Linux agpgart interface v0.103
+0.981->1.002 (21ms)
+  직전: [    0.980898] [drm] Initialized bochs-drm 1.0.0 20130925 for 0000:00:01.0 on minor 0
+  직후: [    1.002270] fbcon: bochs-drmdrmfb (fb0) is primary device
+1.002->1.038 (36ms)
+  직전: [    1.002270] fbcon: bochs-drmdrmfb (fb0) is primary device
+  직후: [    1.038056] Console: switching to colour frame buffer device 160x50
+1.046->1.088 (42ms)
+  직전: [    1.046357] bochs-drm 0000:00:01.0: [drm] fb0: bochs-drmdrmfb frame buffer device
+  직후: [    1.088034] brd: module loaded
+
+[요청 cfg 대비 최종 .config 불일치]
+FB_SIMPLE: 요청=y 최종=n
+  FB_SIMPLE=n DEPENDS_UNMET "Simple framebuffer support"
+    depends: FB && !DRM_SIMPLEDRM && HAS_IOMEM
+FW_LOADER: 요청=n 최종=y
+  FW_LOADER=y SELECTED "Firmware loading facility"
+    <- CFG80211=m DIRECT "cfg80211 - wireless configuration API"
+    <- BNX2X=m DIRECT "Broadcom NetXtremeII 10Gb support"
+    <- BNXT=m DIRECT "Broadcom NetXtreme-C/E support"
+    <- R8169=m DIRECT "Realtek 8169/8168/8101/8125 ethernet support"
+    <- BRCMSMAC=m DIRECT "Broadcom IEEE802.11n PCIe SoftMAC WLAN driver"
+    <- BRCMFMAC_SDIO=y DIRECT "SDIO bus interface support for FullMAC driver"
+    <- BRCMFMAC_USB=y DIRECT "USB bus interface support for FullMAC driver"
+    <- BRCMFMAC_PCIE=y DIRECT "PCIE bus interface support for FullMAC driver"
+    <- RT2X00_LIB_FIRMWARE=y SELECTED
+    <-   <- RT2800PCI=m DIRECT "Ralink rt27xx/rt28xx/rt30xx (PCI/PCIe/PCMCIA) support"
+    <- SND_HDA_CODEC_CA0132_DSP=y DIRECT "Support new DSP code for CA0132 codec"
+NVMEM: 요청=n 최종=y
+  NVMEM=y SELECTED "NVMEM Support"
+    <- EEPROM_AT24=m DIRECT "I2C EEPROMs / RAMs / ROMs from most vendors"
+    <- RTC_NVMEM=y DIRECT "RTC non volatile storage support"
+UNIX98_PTYS: 요청=n 최종=y
+  UNIX98_PTYS=y HIDDEN "Unix98 PTY support"
+    needs: EXPERT
+CRYPTO: 요청=n 최종=y
+  CRYPTO=y SELECTED "Cryptographic API"
+    <- SYSTEM_DATA_VERIFICATION=y SELECTED
+    <-   <- CFG80211_REQUIRE_SIGNED_REGDB=y HIDDEN "require regdb signature"
+    <-   <-   needs: CFG80211_CERTIFICATION_ONUS
+    <- XFRM_ALGO=y SELECTED
+    <-   <- XFRM_USER=m DIRECT "Transformation user configuration interface"
+    <-   <- XFRM_AH=y SELECTED
+    <-   <-   <- INET_AH=m 
+    <-   <-   <- INET6_AH=y 
+    <-   <- XFRM_ESP=y SELECTED
+    <-   <-   <- INET_ESP=m 
+    <-   <-   <- INET6_ESP=y 
+    <-   <- XFRM_IPCOMP=m SELECTED
+    <-   <-   <- INET_IPCOMP=m 
+    <-   <-   <- INET6_IPCOMP=m 
+    <-   <- NET_KEY=m DIRECT "PF_KEY sockets"
+    <- XFRM_AH=y SELECTED
+    <-   <- INET_AH=m DIRECT "IP: AH transformation"
+    <-   <- INET6_AH=y DIRECT "IPv6: AH transformation"
+    <- XFRM_ESP=y SELECTED
+    <-   <- INET_ESP=m DIRECT "IP: ESP transformation"
+    <-   <- INET6_ESP=y DIRECT "IPv6: ESP transformation"
+    <- XFRM_IPCOMP=m SELECTED
+    <-   <- INET_IPCOMP=m DIRECT "IP: IPComp transformation"
+    <-   <- INET6_IPCOMP=m DIRECT "IPv6: IPComp transformation"
+    <- IP_SCTP=m DIRECT "The SCTP Protocol"
+    <- TIPC_CRYPTO=y DIRECT "TIPC encryption support"
+    <- BT=y DIRECT "Bluetooth subsystem support"
+    <- MAC80211=m DIRECT "Generic IEEE 802.11 Networking Stack (mac80211)"
+    <- DM_CRYPT=y DIRECT "Crypt target support"
+    <- USB_RTL8152=m DIRECT "Realtek RTL8152/RTL8153 Based USB Ethernet Adapters"
+    <- EXT4_FS=y DIRECT "The Extended 4 (ext4) filesystem"
+    <- JBD2=y SELECTED
+    <-   <- EXT4_FS=y DIRECT "The Extended 4 (ext4) filesystem"
+    <- BTRFS_FS=y DIRECT "Btrfs filesystem support"
+    <- FS_ENCRYPTION=y DIRECT "FS Encryption (Per-file encryption)"
+    <- CIFS=y DIRECT "SMB3 and CIFS support (advanced network filesystem)"
+    <- ENCRYPTED_KEYS=y DIRECT "ENCRYPTED KEYS"
+    <- LIBCRC32C=y SELECTED "CRC32c (Castagnoli, et al) Cyclic Redundancy-Check"
+    <-   <- NF_CT_PROTO_SCTP=y DIRECT "SCTP protocol connection tracking support"
+    <-   <- NF_TABLES=y DIRECT "Netfilter nf_tables support"
+    <-   <- IP_SCTP=m DIRECT "The SCTP Protocol"
+    <-   <- OPENVSWITCH=m DIRECT "Open vSwitch"
+    <-   <- MD_RAID456=y DIRECT "RAID-4/RAID-5/RAID-6 mode"
+    <-   <- DM_PERSISTENT_DATA=m SELECTED
+    <-   <-   <- DM_THIN_PROVISIONING=m 
+    <-   <- BNX2X=m DIRECT "Broadcom NetXtremeII 10Gb support"
+    <-   <- BNXT=m DIRECT "Broadcom NetXtreme-C/E support"
+    <-   <- BTRFS_FS=y DIRECT "Btrfs filesystem support"
+CRYPTO_JITTERENTROPY: 요청=n 최종=y
+  CRYPTO_JITTERENTROPY=y SELECTED "CPU Jitter Non-Deterministic RNG (Random Number Generator)"
+    <- CRYPTO_DRBG=y DERIVED
+    <-   depends: CRYPTO_DRBG_MENU && CRYPTO  defaults: CRYPTO_DRBG_MENU if CRYPTO_DRBG_MENU && CRYPTO
+CRYPTO_DRBG: 요청=n 최종=y
+  CRYPTO_DRBG=y DERIVED
+    depends: CRYPTO_DRBG_MENU && CRYPTO  defaults: CRYPTO_DRBG_MENU if CRYPTO_DRBG_MENU && CRYPTO
+CRYPTO_USER_API: 요청=n 최종=m
+  CRYPTO_USER_API=m SELECTED
+    <- CRYPTO_USER_API_HASH=m DIRECT "Hash algorithms"
+    <- CRYPTO_USER_API_SKCIPHER=m DIRECT "Symmetric key cipher algorithms"
+    <- CRYPTO_USER_API_RNG=m DIRECT "RNG (random number generator) algorithms"
+    <- CRYPTO_USER_API_AEAD=m DIRECT "AEAD cipher algorithms"
+
+[끄기 가능성 지도 (최종 .config에서 켜진 옵션)]
+형식: SYM=값 분류 [needs/<- selector]  분류 D=DIRECT H=HIDDEN S=SELECTED C=CHOICE, selector 뒤 괄호는 그 selector의 분류
+IRQ_WORK=y S <- IRQ_SIM(S<-GPIO_MOCKUP(D),GPIO_SIM(D)), BPF_SYSCALL(D), TASKS_RCU(S<-BPF_SYSCALL(D),KPROBES(D),FUNCTION_TRACER(D)), TASKS_RUDE_RCU(S<-FUNCTION_TRACER(D)), TASKS_TRACE_RCU(S<-BPF_SYSCALL(D)), RELAY(S<-DRM_I915(D),BLK_DEV_IO_TRACE(D)), PRINTK(H), CPU_FREQ_GOV_COMMON(S<-CPU_FREQ_GOV_ONDEMAND(D)), CPU_FREQ_GOV_SCHEDUTIL(S<-CPU_FREQ_DEFAULT_GOV_SCHEDUTIL(C)), DMA_SHARED_BUFFER(S<-DRM(D)), DRM_I915(D), KFENCE(D)
+KERNEL_LZ4=y C "LZ4"
+SYSVIPC=y D "System V IPC"
+POSIX_MQUEUE=y D "POSIX Message Queues"
+CROSS_MEMORY_ATTACH=y D "Enable process_vm_readv/writev syscalls"
+IRQ_DOMAIN=y S <- IRQ_SIM(S<-GPIO_MOCKUP(D),GPIO_SIM(D)), I2C(S<-IGB(D),MEDIA_SUBDRV_AUTOSELECT(D),DRM(D),DRM_I915(D))
+IRQ_SIM=y S <- GPIO_MOCKUP(D), GPIO_SIM(D)
+IRQ_DOMAIN_HIERARCHY=y S <- GENERIC_MSI_IRQ(S<-PCI_MSI(D))
+TICK_ONESHOT=y S <- NO_HZ_COMMON(S<-NO_HZ_IDLE(C)), HIGH_RES_TIMERS(D)
+NO_HZ_COMMON=y S <- NO_HZ_IDLE(C)
+NO_HZ_IDLE=y C "Idle dynticks system (tickless idle)"
+NO_HZ=y D "Old Idle dynticks config"
+HIGH_RES_TIMERS=y D "High Resolution Timer Support"
+BPF=y S <- BPF_SYSCALL(D), NET(D)
+BPF_SYSCALL=y D "Enable bpf() system call"
+BPF_JIT=y D "Enable BPF Just In Time compiler"
+BPF_UNPRIV_DEFAULT_OFF=y D "Disable unprivileged BPF by default"
+PREEMPT_BUILD=y S <- PREEMPT(C), PREEMPT_DYNAMIC(D)
+PREEMPT=y C "Preemptible Kernel (Low-Latency Desktop)"
+PREEMPTION=y S <- PREEMPT_BUILD(S<-PREEMPT(C),PREEMPT_DYNAMIC(D))
+PREEMPT_DYNAMIC=y D "Preemption behaviour defined on boot"
+TICK_CPU_ACCOUNTING=y C "Simple tick based cputime accounting"
+BSD_PROCESS_ACCT=y D "BSD Process Accounting"
+BSD_PROCESS_ACCT_V3=y D "BSD Process Accounting version 3 file fo"
+CPU_ISOLATION=y D "CPU isolation"
+TASKS_RCU=y S <- BPF_SYSCALL(D), KPROBES(D), TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D)), FUNCTION_TRACER(D)
+TASKS_RUDE_RCU=y S <- FUNCTION_TRACER(D)
+TASKS_TRACE_RCU=y S <- BPF_SYSCALL(D)
+IKCONFIG=y D "Kernel .config support"
+IKCONFIG_PROC=y D "Enable access to .config through /proc/c"
+CGROUPS=y D "Control Group support"
+PAGE_COUNTER=y S <- MEMCG(D)
+MEMCG=y D "Memory controller"
+BLK_CGROUP=y D "IO controller"
+CGROUP_SCHED=y D "CPU controller"
+FAIR_GROUP_SCHED=y D "Group scheduling for SCHED_OTHER"
+CGROUP_PIDS=y D "PIDs controller"
+CGROUP_FREEZER=y D "Freezer controller"
+CPUSETS=y D "Cpuset controller"
+PROC_PID_CPUSET=y D "Include legacy /proc/<pid>/cpuset file"
+CGROUP_DEVICE=y D "Device controller"
+CGROUP_CPUACCT=y D "Simple CPU accounting controller"
+CGROUP_PERF=y D "Perf controller"
+CGROUP_BPF=y D "Support for eBPF programs attached to cg"
+SOCK_CGROUP_DATA=y S <- CGROUP_BPF(D), CGROUP_NET_PRIO(D), CGROUP_NET_CLASSID(S<-NET_CLS_CGROUP(D))
+NAMESPACES=y H needs=EXPERT "Namespaces support"
+UTS_NS=y D "UTS namespace"
+TIME_NS=y D "TIME namespace"
+IPC_NS=y D "IPC namespace"
+USER_NS=y D "User namespace"
+PID_NS=y D "PID Namespaces"
+NET_NS=y D "Network namespace"
+CHECKPOINT_RESTORE=y D "Checkpoint/restore support"
+RELAY=y S <- DRM_I915(D), BLK_DEV_IO_TRACE(D) "Kernel->user space relay support (former"
+BLK_DEV_INITRD=y D "Initial RAM filesystem and RAM disk (ini"
+RD_GZIP=y D "Support initial ramdisk/ramfs compressed"
+RD_BZIP2=y D "Support initial ramdisk/ramfs compressed"
+RD_LZMA=y D "Support initial ramdisk/ramfs compressed"
+RD_XZ=y D "Support initial ramdisk/ramfs compressed"
+RD_LZO=y D "Support initial ramdisk/ramfs compressed"
+RD_LZ4=y D "Support initial ramdisk/ramfs compressed"
+RD_ZSTD=y D "Support initial ramdisk/ramfs compressed"
+INITRAMFS_PRESERVE_MTIME=y D "Preserve cpio archive mtimes in initramf"
+CC_OPTIMIZE_FOR_PERFORMANCE=y C "Optimize for performance (-O2)"
+SYSCTL=y S <- PROC_SYSCTL(H)
+UID16=y H needs=EXPERT "Enable 16-bit UID system calls"
+MULTIUSER=y H needs=EXPERT "Multiple users, groups and capabilities "
+SGETMASK_SYSCALL=y H needs=EXPERT "sgetmask/ssetmask syscalls support"
+SYSFS_SYSCALL=y H needs=EXPERT "Sysfs syscall support"
+FHANDLE=y H needs=EXPERT "open by fhandle syscalls"
+POSIX_TIMERS=y H needs=EXPERT "Posix Clocks & timers"
+PRINTK=y H needs=EXPERT "Enable support for printk"
+BUG=y H needs=EXPERT "BUG() support"
+ELF_CORE=y H needs=EXPERT "Enable ELF core dumps"
+PCSPKR_PLATFORM=y H needs=EXPERT "Enable PC-Speaker support"
+BASE_FULL=y H needs=EXPERT "Enable full-sized data structures for co"
+FUTEX=y H needs=EXPERT,SPARC32 "Enable futex support"
+EPOLL=y H needs=EXPERT "Enable eventpoll support"
+SIGNALFD=y H needs=EXPERT "Enable signalfd() system call"
+TIMERFD=y H needs=EXPERT "Enable timerfd() system call"
+EVENTFD=y S <- MEMCG(D) "Enable eventfd() system call"
+SHMEM=y S <- DRM_I915(D) "Use full shmem filesystem"
+AIO=y H needs=EXPERT "Enable AIO support"
+IO_URING=y H needs=EXPERT "Enable IO uring support"
+ADVISE_SYSCALLS=y H needs=EXPERT "Enable madvise/fadvise syscalls"
+MEMBARRIER=y S <- RSEQ(H) "Enable membarrier() system call"
+KALLSYMS=y S <- KPROBES(D), FUNCTION_TRACER(D), FTRACE_SYSCALLS(D) "Load all symbols for debugging/ksymoops"
+KCMP=y S <- CHECKPOINT_RESTORE(D), DRM(D) "Enable kcmp() system call"
+RSEQ=y H needs=EXPERT "Enable rseq() system call"
+CACHESTAT_SYSCALL=y H needs=EXPERT "Enable cachestat() system call"
+SYSTEM_DATA_VERIFICATION=y S <- CFG80211_REQUIRE_SIGNED_REGDB(H)
+TRACEPOINTS=y S <- TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D)), BLK_DEV_IO_TRACE(D)
+CRASH_CORE=y S <- PROC_KCORE(D)
+64BIT=y D "64-bit kernel"
+SMP=y D "Symmetric multi-processing support"
+X86_X2APIC=y D "Support x2apic"
+X86_MPPARSE=y D "Enable MPS table"
+X86_EXTENDED_PLATFORM=y D "Support for extended (non-PC) x86 platfo"
+X86_AMD_PLATFORM_DEVICE=y D "AMD ACPI2Platform devices support"
+IOSF_MBI=y S <- DRM_I915(D), MMC_SDHCI_PCI(D), MMC_SDHCI_ACPI(D) "Intel SoC IOSF Sideband support for SoC "
+SCHED_OMIT_FRAME_POINTER=y D "Single-depth WCHAN output"
+HYPERVISOR_GUEST=y D "Linux guest support"
+PARAVIRT=y D "Enable paravirtualization code"
+X86_HV_CALLBACK_VECTOR=y S <- KVM_GUEST(D)
+KVM_GUEST=y D "KVM Guest support (including kvmclock)"
+ARCH_CPUIDLE_HALTPOLL=y S <- KVM_GUEST(D) "Disable host haltpoll when loading haltp"
+PARAVIRT_CLOCK=y S <- KVM_GUEST(D)
+MCORE2=y C "Core 2/newer Xeon"
+CPU_SUP_INTEL=y H needs=PROCESSOR_SELECT "Support Intel processors"
+CPU_SUP_AMD=y S <- CPU_SUP_HYGON(H) "Support AMD processors"
+CPU_SUP_HYGON=y H needs=PROCESSOR_SELECT "Support Hygon processors"
+CPU_SUP_CENTAUR=y H needs=PROCESSOR_SELECT "Support Centaur processors"
+CPU_SUP_ZHAOXIN=y H needs=PROCESSOR_SELECT "Support Zhaoxin processors"
+HPET_TIMER=y H needs=X86_32 "HPET Timer Support"
+DMI=y H needs=EXPERT "Enable DMI scanning"
+BOOT_VESA_SUPPORT=y S <- SYSFB(S<-SYSFB_SIMPLEFB(D),FB_VESA(D),FB_EFI(D))
+SCHED_CLUSTER=y D "Cluster scheduler support"
+SCHED_MC=y D "Multi-core scheduler support"
+SCHED_MC_PRIO=y D "CPU core priorities scheduler support"
+X86_MCE=y D "Machine Check / overheating reporting"
+X86_MCE_INTEL=y D "Intel MCE features"
+X86_MCE_AMD=y D "AMD MCE features"
+PERF_EVENTS_INTEL_UNCORE=y D "Intel uncore performance events"
+PERF_EVENTS_INTEL_RAPL=y D "Intel/AMD rapl performance events"
+PERF_EVENTS_INTEL_CSTATE=y D "Intel cstate performance events"
+PERF_EVENTS_AMD_UNCORE=y D "AMD Uncore performance events"
+X86_16BIT=y H needs=EXPERT "Enable support for 16-bit segments"
+X86_VSYSCALL_EMULATION=y H needs=EXPERT "Enable vsyscall emulation"
+X86_IOPL_IOPERM=y D "IOPERM and IOPL Emulation"
+X86_MSR=y D "/dev/cpu/*/msr - Model-specific register"
+X86_CPUID=y D "/dev/cpu/*/cpuid - CPU information suppo"
+X86_5LEVEL=y D "Enable 5-level page tables support"
+X86_CHECK_BIOS_CORRUPTION=y D "Check for low memory corruption"
+X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK=y D "Set the default setting of memory_corrup"
+MTRR=y H needs=EXPERT "MTRR (Memory Type Range Register) suppor"
+MTRR_SANITIZER=y D "MTRR cleanup support"
+X86_PAT=y H needs=EXPERT "x86 PAT support"
+X86_UMIP=y H needs=EXPERT "User Mode Instruction Prevention"
+X86_CET=y S <- X86_KERNEL_IBT(D)
+X86_KERNEL_IBT=y D "Indirect Branch Tracking"
+X86_INTEL_MEMORY_PROTECTION_KEYS=y D "Memory Protection Keys"
+X86_INTEL_TSX_MODE_OFF=y C "off"
+EFI=y D "EFI runtime service support"
+EFI_STUB=y D "EFI stub support"
+EFI_HANDOVER_PROTOCOL=y D "EFI handover protocol (DEPRECATED)"
+HZ_1000=y C "1000 HZ"
+RELOCATABLE=y S <- EFI_STUB(D) "Build a relocatable kernel"
+RANDOMIZE_BASE=y D "Randomize the address of the kernel imag"
+DYNAMIC_MEMORY_LAYOUT=y S <- X86_5LEVEL(D), RANDOMIZE_MEMORY(D)
+RANDOMIZE_MEMORY=y D "Randomize the kernel memory sections"
+LEGACY_VSYSCALL_XONLY=y C "Emulate execution only"
+MODIFY_LDT_SYSCALL=y H needs=EXPERT "Enable the LDT (local descriptor table)"
+CALL_PADDING=y S <- CALL_THUNKS(S<-CALL_DEPTH_TRACKING(D))
+CALL_THUNKS=y S <- CALL_DEPTH_TRACKING(D)
+CPU_MITIGATIONS=y D "Mitigations for CPU vulnerabilities"
+PAGE_TABLE_ISOLATION=y D "Remove the kernel mapping in user mode"
+RETPOLINE=y D "Avoid speculative indirect branches in k"
+RETHUNK=y D "Enable return-thunks"
+CPU_UNRET_ENTRY=y D "Enable UNRET on kernel entry"
+CALL_DEPTH_TRACKING=y D "Mitigate RSB underflow with call depth t"
+CPU_IBPB_ENTRY=y D "Enable IBPB on kernel entry"
+CPU_IBRS_ENTRY=y D "Enable IBRS on kernel entry"
+CPU_SRSO=y D "Mitigate speculative RAS overflow on AMD"
+MITIGATION_RFDS=y D "RFDS Mitigation"
+MITIGATION_SPECTRE_BHI=y D "Mitigate Spectre-BHB (Branch History Inj"
+MITIGATION_ITS=y D "Enable Indirect Target Selection mitigat"
+MITIGATION_TSA=y D "Mitigate Transient Scheduler Attacks"
+SUSPEND=y D "Suspend to RAM and standby"
+SUSPEND_FREEZER=y H needs=ARCH_WANTS_FREEZER_CONTROL,BROKEN "Enable freezer for suspend to RAM/standb"
+PM_DEBUG=y D "Power Management Debug Support"
+PM_ADVANCED_DEBUG=y D "Extra PM attributes in sysfs for low-lev"
+ACPI=y D "ACPI (Advanced Configuration and Power I"
+ACPI_SPCR_TABLE=y D "ACPI Serial Port Console Redirection Sup"
+ACPI_REV_OVERRIDE_POSSIBLE=y D "Allow supported ACPI revision to be over"
+ACPI_AC=y D "AC Adapter"
+ACPI_BATTERY=y D "Battery"
+ACPI_BUTTON=y S <- DRM_I915(D) "Button"
+ACPI_VIDEO=m S <- DRM_I915(D) "Video"
+ACPI_FAN=y D "Fan"
+ACPI_CPPC_LIB=y S <- X86_INTEL_PSTATE(S<-SCHED_MC_PRIO(D))
+ACPI_PROCESSOR=y S <- X86_INTEL_PSTATE(S<-SCHED_MC_PRIO(D)) "Processor"
+ACPI_THERMAL=y D "Thermal Zone"
+ACPI_TABLE_UPGRADE=y D "Allow upgrading ACPI tables via initrd"
+ACPI_PCC=y D "ACPI PCC Address Space"
+ACPI_PRMT=y D "Platform Runtime Mechanism Support"
+X86_PM_TIMER=y H needs=EXPERT,JAILHOUSE_GUEST "Power Management Timer Support"
+CPU_FREQ=y S <- SCHED_MC_PRIO(D) "CPU Frequency scaling"
+CPU_FREQ_GOV_ATTR_SET=y S <- CPU_FREQ_GOV_COMMON(S<-CPU_FREQ_GOV_ONDEMAND(D)), CPU_FREQ_GOV_SCHEDUTIL(S<-CPU_FREQ_DEFAULT_GOV_SCHEDUTIL(C))
+CPU_FREQ_GOV_COMMON=y S <- CPU_FREQ_GOV_ONDEMAND(D)
+CPU_FREQ_STAT=y D "CPU frequency transition statistics"
+CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y C "schedutil"
+CPU_FREQ_GOV_PERFORMANCE=y S <- CPU_FREQ_DEFAULT_GOV_SCHEDUTIL(C), X86_INTEL_PSTATE(S<-SCHED_MC_PRIO(D)) "'performance' governor"
+CPU_FREQ_GOV_ONDEMAND=y D "'ondemand' cpufreq policy governor"
+CPU_FREQ_GOV_SCHEDUTIL=y S <- CPU_FREQ_DEFAULT_GOV_SCHEDUTIL(C), X86_INTEL_PSTATE(S<-SCHED_MC_PRIO(D)) "'schedutil' cpufreq policy governor"
+X86_INTEL_PSTATE=y S <- SCHED_MC_PRIO(D) "Intel P state control"
+X86_ACPI_CPUFREQ=y D "ACPI Processor P-States driver"
+X86_ACPI_CPUFREQ_CPB=y D "Legacy cpb sysfs knob support for AMD CP"
+CPU_IDLE_GOV_HALTPOLL=y S <- HALTPOLL_CPUIDLE(D) "Haltpoll governor (for virtualized syste"
+HALTPOLL_CPUIDLE=y D "Halt poll cpuidle driver"
+INTEL_IDLE=y D "Cpuidle Driver for Intel Processors"
+PCI_MMCONFIG=y D "Support mmconfig PCI config space access"
+ISA_DMA_API=y H needs=EXPERT "ISA-style DMA support"
+IA32_EMULATION=y D "IA32 Emulation"
+VIRTUALIZATION=y D "Virtualization"
+KPROBES=y D "Kprobes"
+UPROBES=y S <- UPROBE_EVENTS(D)
+SECCOMP=y D "Enable seccomp to safely execute untrust"
+STACKPROTECTOR=y D "Stack Protector buffer overflow detectio"
+STACKPROTECTOR_STRONG=y D "Strong Stack Protector"
+LTO_NONE=y C "None"
+COMPAT_OLD_SIGACTION=y S <- IA32_EMULATION(D)
+COMPAT_32BIT_TIME=y D "Provide system calls for 32-bit time_t"
+VMAP_STACK=y D "Use a virtually-mapped stack"
+RANDOMIZE_KSTACK_OFFSET=y H needs=140000,CC_IS_CLANG,CLANG_VERSION,EXPERT,INIT_STACK_NONE "Support for randomizing kernel stack off"
+STRICT_KERNEL_RWX=y H needs=ARCH_OPTIONAL_KERNEL_RWX "Make kernel text and rodata read-only"
+STRICT_MODULE_RWX=y H needs=ARCH_OPTIONAL_KERNEL_RWX "Set loadable kernel module data as NX an"
+GCC_PLUGINS=y D "GCC plugins"
+RT_MUTEXES=y S <- I2C(S<-IGB(D),MEDIA_SUBDRV_AUTOSELECT(D),DRM(D),DRM_I915(D))
+MODULES=y D "Enable loadable module support"
+MODULE_UNLOAD=y D "Module unloading"
+MODULE_COMPRESS_NONE=y C "None"
+BLOCK=y H needs=EXPERT "Enable the block layer"
+BLOCK_LEGACY_AUTOLOAD=y S <- BLK_DEV_MD(D) "Legacy autoloading support"
+BLK_CGROUP_RWSTAT=y S <- BFQ_GROUP_IOSCHED(D)
+BLK_CGROUP_PUNT_BIO=y S <- BTRFS_FS(D)
+BLK_DEV_BSG_COMMON=y S <- SCSI(S<-ATA(D))
+BLK_ICQ=y S <- IOSCHED_BFQ(D)
+BLK_DEBUG_FS=y D "Block layer debugging information in deb"
+PARTITION_ADVANCED=y D "Advanced partition selection"
+MSDOS_PARTITION=y D "PC BIOS (MSDOS partition tables) support"
+EFI_PARTITION=y D "EFI GUID Partition support"
+BLOCK_HOLDER_DEPRECATED=y S <- BLK_DEV_MD(D), BLK_DEV_DM(D)
+BLK_MQ_STACKING=y S <- BLK_DEV_DM(D)
+MQ_IOSCHED_DEADLINE=y D "MQ deadline I/O scheduler"
+MQ_IOSCHED_KYBER=y D "Kyber I/O scheduler"
+IOSCHED_BFQ=y D "BFQ I/O scheduler"
+BFQ_GROUP_IOSCHED=y D "BFQ hierarchical scheduling support"
+ASN1=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)), CIFS(D), CRYPTO_RSA(S<-CRYPTO_DEV_VIRTIO(D))
+UNINLINE_SPIN_UNLOCK=y S <- PREEMPT_BUILD(S<-PREEMPT(C),PREEMPT_DYNAMIC(D))
+BINFMT_ELF=y S <- IA32_EMULATION(D) "Kernel support for ELF binaries"
+ELFCORE=y S <- BINFMT_ELF(S<-IA32_EMULATION(D))
+CORE_DUMP_DEFAULT_ELF_HEADERS=y D "Write ELF core dumps with partial segmen"
+BINFMT_SCRIPT=y D "Kernel support for scripts starting with"
+BINFMT_MISC=m D "Kernel support for MISC binaries"
+COREDUMP=y H needs=EXPERT "Enable core dump support"
+SWAP=y D "Support for paging of anonymous memory ("
+SLUB=y C "SLUB (Unqueued Allocator)"
+SLAB_MERGE_DEFAULT=y D "Allow slab caches to be merged"
+SLUB_CPU_PARTIAL=y D "SLUB per cpu partial cache"
+COMPAT_BRK=y D "Disable heap randomization"
+SPARSEMEM_VMEMMAP=y S <- X86_5LEVEL(D) "Sparse Memory virtual memmap"
+MEMORY_BALLOON=y S <- VIRTIO_BALLOON(D)
+BALLOON_COMPACTION=y D "Allow for balloon memory compaction/migr"
+COMPACTION=y D "Allow for memory compaction"
+PAGE_REPORTING=y S <- VIRTIO_BALLOON(D) "Free page reporting"
+MIGRATION=y S <- COMPACTION(D) "Page migration"
+ZONE_DMA=y H needs=ARCH_HAS_ZONE_DMA_SET "Support DMA zone"
+VMAP_PFN=y S <- DRM_I915(D)
+VM_EVENT_COUNTERS=y H needs=EXPERT "Enable VM event counters for /proc/vmsta"
+MEMFD_CREATE=y S <- TMPFS(S<-DRM_I915(D)) "Enable memfd_create() system call"
+SECRETMEM=y H needs=EXPERT "Enable memfd_secret() system call"
+NET=y D "Networking support"
+NET_INGRESS=y S <- NET_XGRESS(S<-BPF_SYSCALL(D),NET_SCH_INGRESS(D),NET_CLS_ACT(D)), NETFILTER_INGRESS(D)
+NET_EGRESS=y S <- NET_XGRESS(S<-BPF_SYSCALL(D),NET_SCH_INGRESS(D),NET_CLS_ACT(D)), NETFILTER_EGRESS(D)
+NET_XGRESS=y S <- BPF_SYSCALL(D), NET_SCH_INGRESS(D), NET_CLS_ACT(D)
+SKB_EXTENSIONS=y S <- BRIDGE_NETFILTER(D)
+PACKET=y D "Packet socket"
+PACKET_DIAG=y D "Packet: sockets monitoring interface"
+UNIX=y D "Unix domain sockets"
+UNIX_DIAG=y D "UNIX: socket monitoring interface"
+XFRM=y S <- XFRM_ALGO(S<-XFRM_USER(D),NET_KEY(D))
+XFRM_ALGO=y S <- XFRM_USER(D), XFRM_AH(S<-INET_AH(D),INET6_AH(D)), XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), XFRM_IPCOMP(S<-INET_IPCOMP(D),INET6_IPCOMP(D)), NET_KEY(D)
+XFRM_USER=m D "Transformation user configuration interf"
+XFRM_SUB_POLICY=y D "Transformation sub policy support"
+XFRM_MIGRATE=y S <- NET_KEY_MIGRATE(D) "Transformation migrate database"
+XFRM_AH=y S <- INET_AH(D), INET6_AH(D)
+XFRM_ESP=y S <- INET_ESP(D), INET6_ESP(D)
+XFRM_IPCOMP=m S <- INET_IPCOMP(D), INET6_IPCOMP(D)
+NET_KEY=m D "PF_KEY sockets"
+NET_KEY_MIGRATE=y D "PF_KEY MIGRATE"
+INET=y D "TCP/IP networking"
+IP_MULTICAST=y D "IP: multicasting"
+IP_ADVANCED_ROUTER=y D "IP: advanced router"
+IP_MULTIPLE_TABLES=y D "IP: policy routing"
+IP_ROUTE_MULTIPATH=y D "IP: equal cost multipath"
+IP_ROUTE_VERBOSE=y D "IP: verbose route monitoring"
+IP_PNP=y D "IP: kernel level autoconfiguration"
+IP_PNP_DHCP=y D "IP: DHCP support"
+IP_PNP_BOOTP=y D "IP: BOOTP support"
+IP_PNP_RARP=y D "IP: RARP support"
+NET_IPIP=m D "IP: tunneling"
+NET_IPGRE_DEMUX=m D "IP: GRE demultiplexer"
+NET_IP_TUNNEL=y S <- NET_IPIP(D), NET_IPGRE(D), NET_UDP_TUNNEL(S<-IP_SCTP(D),TIPC_MEDIA_UDP(D),VXLAN(D)), IPV6_SIT(D)
+NET_IPGRE=m D "IP: GRE tunnels over IP"
+NET_IPGRE_BROADCAST=y D "IP: broadcast GRE over IP"
+IP_MROUTE_COMMON=y S <- IP_MROUTE(D)
+IP_MROUTE=y D "IP: multicast routing"
+IP_PIMSM_V1=y D "IP: PIM-SM version 1 support"
+IP_PIMSM_V2=y D "IP: PIM-SM version 2 support"
+SYN_COOKIES=y S <- NFT_SYNPROXY(D) "IP: TCP syncookie support"
+NET_UDP_TUNNEL=m S <- IP_SCTP(D), TIPC_MEDIA_UDP(D), VXLAN(D)
+INET_AH=m D "IP: AH transformation"
+INET_ESP=m D "IP: ESP transformation"
+INET_IPCOMP=m D "IP: IPComp transformation"
+INET_XFRM_TUNNEL=m S <- INET_IPCOMP(D)
+INET_TUNNEL=y S <- NET_IPIP(D), INET_XFRM_TUNNEL(S<-INET_IPCOMP(D)), IPV6_SIT(D)
+INET_DIAG=y D "INET: socket monitoring interface"
+INET_UDP_DIAG=y D "UDP: socket monitoring interface"
+TCP_CONG_CUBIC=y H needs=TCP_CONG_ADVANCED "CUBIC TCP"
+IPV6=y D "The IPv6 protocol"
+IPV6_ROUTER_PREF=y D "IPv6: Router Preference (RFC 4191) suppo"
+INET6_AH=y D "IPv6: AH transformation"
+INET6_ESP=y D "IPv6: ESP transformation"
+INET6_IPCOMP=m D "IPv6: IPComp transformation"
+INET6_XFRM_TUNNEL=m S <- INET6_IPCOMP(D)
+INET6_TUNNEL=m S <- INET6_XFRM_TUNNEL(S<-INET6_IPCOMP(D)), IPV6_TUNNEL(D)
+IPV6_SIT=y D "IPv6: IPv6-in-IPv4 tunnel (SIT driver)"
+IPV6_NDISC_NODETYPE=y S <- IPV6_SIT(D)
+IPV6_TUNNEL=m D "IPv6: IP-in-IPv6 tunnel (RFC2473)"
+NET_PTP_CLASSIFY=y S <- PTP_1588_CLOCK(D)
+NETFILTER=y D "Network packet filtering framework (Netf"
+NETFILTER_ADVANCED=y D "Advanced netfilter configuration"
+BRIDGE_NETFILTER=y D "Bridged IP/ARP packets filtering"
+NETFILTER_INGRESS=y D "Netfilter ingress support"
+NETFILTER_EGRESS=y D "Netfilter egress support"
+NETFILTER_NETLINK=y S <- NETFILTER_NETLINK_OSF(S<-NFT_OSF(D)), NF_TABLES(D)
+NETFILTER_FAMILY_BRIDGE=y S <- BRIDGE_NETFILTER(D), NF_TABLES_BRIDGE(D), BRIDGE_NF_EBTABLES(D)
+NETFILTER_FAMILY_ARP=y S <- NF_TABLES_ARP(D), IP_NF_ARPTABLES(D)
+NETFILTER_NETLINK_OSF=m S <- NFT_OSF(D) "Netfilter OSF over NFNETLINK interface"
+NF_CONNTRACK=y D "Netfilter connection tracking support"
+NETFILTER_CONNCOUNT=m S <- NFT_CONNLIMIT(D)
+NF_CONNTRACK_TIMEOUT=y D "Connection tracking timeout"
+NF_CONNTRACK_OVS=y S <- OPENVSWITCH(D)
+NF_CT_PROTO_DCCP=y D "DCCP protocol connection tracking suppor"
+NF_CT_PROTO_SCTP=y D "SCTP protocol connection tracking suppor"
+NF_CT_PROTO_UDPLITE=y D "UDP-Lite protocol connection tracking su"
+NF_NAT=m S <- NFT_NAT(D), IP_NF_NAT(D), IP6_NF_NAT(D) "Network Address Translation support"
+NF_NAT_REDIRECT=y S <- NFT_REDIR(D), NETFILTER_XT_TARGET_REDIRECT(S<-IP_NF_TARGET_REDIRECT(D))
+NF_NAT_MASQUERADE=y S <- NFT_MASQ(D), NETFILTER_XT_TARGET_MASQUERADE(S<-IP_NF_TARGET_MASQUERADE(D))
+NF_NAT_OVS=y S <- OPENVSWITCH(D)
+NETFILTER_SYNPROXY=m S <- NFT_SYNPROXY(D)
+NF_TABLES=y D "Netfilter nf_tables support"
+NF_TABLES_INET=y D "Netfilter nf_tables mixed IPv4/IPv6 tabl"
+NF_TABLES_NETDEV=y D "Netfilter nf_tables netdev tables suppor"
+NFT_NUMGEN=m D "Netfilter nf_tables number generator mod"
+NFT_CT=m D "Netfilter nf_tables conntrack module"
+NFT_FLOW_OFFLOAD=m D "Netfilter nf_tables hardware flow offloa"
+NFT_CONNLIMIT=m D "Netfilter nf_tables connlimit module"
+NFT_LOG=m D "Netfilter nf_tables log module"
+NFT_LIMIT=m D "Netfilter nf_tables limit module"
+NFT_MASQ=m D "Netfilter nf_tables masquerade support"
+NFT_REDIR=m D "Netfilter nf_tables redirect support"
+NFT_NAT=m D "Netfilter nf_tables nat module"
+NFT_TUNNEL=m D "Netfilter nf_tables tunnel module"
+NFT_QUOTA=m D "Netfilter nf_tables quota module"
+NFT_REJECT=m D "Netfilter nf_tables reject support"
+NFT_COMPAT=m D "Netfilter x_tables over nf_tables module"
+NFT_HASH=m D "Netfilter nf_tables hash module"
+NFT_FIB=y S <- NFT_FIB_IPV4(D), NFT_FIB_IPV6(D)
+NFT_FIB_INET=y D "Netfilter nf_tables fib inet support"
+NFT_XFRM=m D "Netfilter nf_tables xfrm/IPSec security "
+NFT_SOCKET=m D "Netfilter nf_tables socket match support"
+NFT_OSF=m D "Netfilter nf_tables passive OS fingerpri"
+NFT_SYNPROXY=m D "Netfilter nf_tables SYNPROXY expression "
+NF_FLOW_TABLE_INET=m D "Netfilter flow table mixed IPv4/IPv6 mod"
+NF_FLOW_TABLE=m D "Netfilter flow table module"
+NETFILTER_XTABLES=m S <- IP_NF_IPTABLES(D), IP_NF_ARPTABLES(D), IP6_NF_IPTABLES(D) "Netfilter Xtables support (required for "
+NETFILTER_XT_MARK=m D "nfmark target and match support"
+NETFILTER_XT_TARGET_CHECKSUM=m D "CHECKSUM target support"
+NETFILTER_XT_NAT=m S <- IP_NF_NAT(D), IP6_NF_NAT(D) ""SNAT and DNAT" targets support"
+NETFILTER_XT_TARGET_NETMAP=m S <- IP_NF_TARGET_NETMAP(D) ""NETMAP" target support"
+NETFILTER_XT_TARGET_REDIRECT=m S <- IP_NF_TARGET_REDIRECT(D) "REDIRECT target support"
+NETFILTER_XT_TARGET_MASQUERADE=m S <- IP_NF_TARGET_MASQUERADE(D) "MASQUERADE target support"
+NETFILTER_XT_MATCH_ADDRTYPE=m D ""addrtype" address type match support"
+NETFILTER_XT_MATCH_ECN=m S <- IP_NF_MATCH_ECN(D) ""ecn" match support"
+NETFILTER_XT_MATCH_HL=m S <- IP_NF_MATCH_TTL(D), IP6_NF_MATCH_HL(D) ""hl" hoplimit/TTL match support"
+NETFILTER_XT_MATCH_SCTP=m D ""sctp" protocol match support"
+NF_DEFRAG_IPV4=y S <- NF_CONNTRACK(D)
+NF_SOCKET_IPV4=m S <- NFT_SOCKET(D) "IPv4 socket lookup support"
+NF_TABLES_IPV4=y S <- NF_TABLES_INET(D) "IPv4 nf_tables support"
+NFT_FIB_IPV4=y D "nf_tables fib / ip route lookup support"
+NF_TABLES_ARP=y D "ARP nf_tables support"
+NF_REJECT_IPV4=m S <- IP_NF_TARGET_REJECT(D) "IPv4 packet rejection"
+IP_NF_IPTABLES=m D "IP tables support (required for filterin"
+IP_NF_MATCH_ECN=m D ""ecn" match support"
+IP_NF_MATCH_TTL=m D ""ttl" match support"
+IP_NF_FILTER=m D "Packet filtering"
+IP_NF_TARGET_REJECT=m D "REJECT target support"
+IP_NF_NAT=m D "iptables NAT support"
+IP_NF_TARGET_MASQUERADE=m D "MASQUERADE target support"
+IP_NF_TARGET_NETMAP=m D "NETMAP target support"
+IP_NF_TARGET_REDIRECT=m D "REDIRECT target support"
+IP_NF_MANGLE=m D "Packet mangling"
+IP_NF_TARGET_ECN=m D "ECN target support"
+IP_NF_RAW=m D "raw table support (required for NOTRACK/"
+IP_NF_ARPTABLES=m D "ARP tables support"
+IP_NF_ARPFILTER=m D "ARP packet filtering"
+IP_NF_ARP_MANGLE=m D "ARP payload mangling"
+NF_SOCKET_IPV6=m S <- NFT_SOCKET(D) "IPv6 socket lookup support"
+NF_TABLES_IPV6=y S <- NF_TABLES_INET(D) "IPv6 nf_tables support"
+NFT_FIB_IPV6=y D "nf_tables fib / ipv6 route lookup suppor"
+IP6_NF_IPTABLES=m D "IP6 tables support (required for filteri"
+IP6_NF_MATCH_EUI64=m D ""eui64" address check"
+IP6_NF_MATCH_FRAG=m D ""frag" Fragmentation header match suppor"
+IP6_NF_MATCH_OPTS=m D ""hbh" hop-by-hop and "dst" opts header m"
+IP6_NF_MATCH_HL=m D ""hl" hoplimit match support"
+IP6_NF_MATCH_IPV6HEADER=m D ""ipv6header" IPv6 Extension Headers Matc"
+IP6_NF_MATCH_RT=m D ""rt" Routing header match support"
+IP6_NF_FILTER=m D "Packet filtering"
+IP6_NF_MANGLE=m D "Packet mangling"
+IP6_NF_RAW=m D "raw table support (required for TRACE)"
+IP6_NF_NAT=m D "ip6tables NAT support"
+NF_DEFRAG_IPV6=y S <- NF_CONNTRACK(D)
+NF_TABLES_BRIDGE=m D "Ethernet Bridge nf_tables support"
+BRIDGE_NF_EBTABLES=m D "Ethernet Bridge tables (ebtables) suppor"
+BRIDGE_EBT_BROUTE=m D "ebt: broute table support"
+BRIDGE_EBT_T_FILTER=m D "ebt: filter table support"
+BRIDGE_EBT_T_NAT=m D "ebt: nat table support"
+BRIDGE_EBT_802_3=m D "ebt: 802.3 filter support"
+BRIDGE_EBT_AMONG=m D "ebt: among filter support"
+BRIDGE_EBT_ARP=m D "ebt: ARP filter support"
+BRIDGE_EBT_IP=m D "ebt: IP filter support"
+BRIDGE_EBT_IP6=m D "ebt: IP6 filter support"
+BRIDGE_EBT_LIMIT=m D "ebt: limit match support"
+BRIDGE_EBT_MARK=m D "ebt: mark filter support"
+BRIDGE_EBT_PKTTYPE=m D "ebt: packet type filter support"
+BRIDGE_EBT_STP=m D "ebt: STP filter support"
+BRIDGE_EBT_VLAN=m D "ebt: 802.1Q VLAN filter support"
+BRIDGE_EBT_ARPREPLY=m D "ebt: arp reply target support"
+BRIDGE_EBT_DNAT=m D "ebt: dnat target support"
+BRIDGE_EBT_MARK_T=m D "ebt: mark target support"
+BRIDGE_EBT_REDIRECT=m D "ebt: redirect target support"
+BRIDGE_EBT_SNAT=m D "ebt: snat target support"
+BRIDGE_EBT_LOG=m D "ebt: log support"
+BRIDGE_EBT_NFLOG=m D "ebt: nflog support"
+IP_SCTP=m D "The SCTP Protocol"
+SCTP_DEFAULT_COOKIE_HMAC_MD5=y C "Enable optional MD5 hmac cookie generati"
+SCTP_COOKIE_HMAC_MD5=y S <- SCTP_DEFAULT_COOKIE_HMAC_MD5(C) "Enable optional MD5 hmac cookie generati"
+TIPC=m D "The TIPC Protocol"
+TIPC_MEDIA_UDP=y D "IP/UDP media type support"
+TIPC_CRYPTO=y D "TIPC encryption support"
+TIPC_DIAG=m D "TIPC: socket monitoring interface"
+STP=y S <- BRIDGE(D)
+BRIDGE=y D "802.1d Ethernet Bridging"
+BRIDGE_IGMP_SNOOPING=y D "IGMP/MLD snooping"
+VLAN_8021Q=m D "802.1Q/802.1ad VLAN Support"
+LLC=y S <- STP(S<-BRIDGE(D)), BRIDGE(D)
+6LOWPAN=m D "6LoWPAN Support"
+6LOWPAN_NHC=m D "Next Header and Generic Header Compressi"
+6LOWPAN_NHC_DEST=m D "Destination Options Header Support"
+6LOWPAN_NHC_FRAGMENT=m D "Fragment Header Support"
+6LOWPAN_NHC_HOP=m D "Hop-by-Hop Options Header Support"
+6LOWPAN_NHC_IPV6=m D "IPv6 Header Support"
+6LOWPAN_NHC_MOBILITY=m D "Mobility Header Support"
+6LOWPAN_NHC_ROUTING=m D "Routing Header Support"
+6LOWPAN_NHC_UDP=m D "UDP Header Support"
+NET_SCHED=y D "QoS and/or fair queueing"
+NET_SCH_HTB=m D "Hierarchical Token Bucket (HTB)"
+NET_SCH_HFSC=m D "Hierarchical Fair Service Curve (HFSC)"
+NET_SCH_PRIO=m D "Multi Band Priority Queueing (PRIO)"
+NET_SCH_MULTIQ=m D "Hardware Multiqueue-aware Multi Band Que"
+NET_SCH_RED=m D "Random Early Detection (RED)"
+NET_SCH_SFQ=m D "Stochastic Fairness Queueing (SFQ)"
+NET_SCH_TEQL=m D "True Link Equalizer (TEQL)"
+NET_SCH_TBF=m D "Token Bucket Filter (TBF)"
+NET_SCH_GRED=m D "Generic Random Early Detection (GRED)"
+NET_SCH_NETEM=m D "Network emulator (NETEM)"
+NET_SCH_CODEL=m D "Controlled Delay AQM (CODEL)"
+NET_SCH_FQ_CODEL=m D "Fair Queue Controlled Delay AQM (FQ_CODE"
+NET_SCH_INGRESS=m D "Ingress/classifier-action Qdisc"
+NET_CLS=y S <- NET_CLS_BASIC(D), NET_CLS_U32(D), NET_CLS_CGROUP(D), NET_CLS_FLOWER(D), NET_EMATCH(D), NET_CLS_ACT(D)
+NET_CLS_BASIC=y D "Elementary classification (BASIC)"
+NET_CLS_U32=y D "Universal 32bit comparisons w/ hashing ("
+NET_CLS_CGROUP=m D "Control Group Classifier"
+NET_CLS_FLOWER=m D "Flower classifier"
+NET_EMATCH=y D "Extended Matches"
+NET_EMATCH_U32=y D "U32 key"
+NET_EMATCH_META=y D "Metadata"
+NET_CLS_ACT=y D "Actions"
+NET_ACT_POLICE=m D "Traffic Policing"
+NET_ACT_MIRRED=m D "Redirecting and Mirroring"
+NET_ACT_SKBEDIT=m D "SKB Editing"
+NET_SCH_FIFO=y S <- NET_SCHED(D)
+DNS_RESOLVER=y S <- CIFS(D) "DNS Resolver support"
+OPENVSWITCH=m D "Open vSwitch"
+OPENVSWITCH_GRE=m D "Open vSwitch GRE tunneling support"
+OPENVSWITCH_VXLAN=m D "Open vSwitch VXLAN tunneling support"
+VSOCKETS=y D "Virtual Socket protocol"
+VSOCKETS_DIAG=y D "Virtual Sockets monitoring interface"
+VSOCKETS_LOOPBACK=y D "Virtual Sockets loopback transport"
+VIRTIO_VSOCKETS=y D "virtio transport for Virtual Sockets"
+VIRTIO_VSOCKETS_COMMON=y S <- VSOCKETS_LOOPBACK(D), VIRTIO_VSOCKETS(D)
+NETLINK_DIAG=y D "NETLINK: socket monitoring interface"
+MPLS=y S <- OPENVSWITCH(D) "MultiProtocol Label Switching"
+NET_MPLS_GSO=m S <- OPENVSWITCH(D) "MPLS: GSO support"
+NET_NSH=m S <- OPENVSWITCH(D) "Network Service Header (NSH) protocol"
+PCPU_DEV_REFCNT=y D "Use percpu variables to maintain network"
+CGROUP_NET_PRIO=y D "Network priority cgroup"
+CGROUP_NET_CLASSID=y S <- NET_CLS_CGROUP(D) "Network classid cgroup"
+NET_PKTGEN=m D "Packet Generator (USE WITH CAUTION)"
+BT=y D "Bluetooth subsystem support"
+BT_BREDR=y D "Bluetooth Classic (BR/EDR) features"
+BT_RFCOMM=m D "RFCOMM protocol support"
+BT_RFCOMM_TTY=y D "RFCOMM TTY support"
+BT_BNEP=m D "BNEP protocol support"
+BT_BNEP_MC_FILTER=y D "Multicast filter support"
+BT_BNEP_PROTO_FILTER=y D "Protocol filter support"
+BT_CMTP=m D "CMTP protocol support"
+BT_HIDP=m D "HIDP protocol support"
+BT_LE=y D "Bluetooth Low Energy (LE) features"
+BT_LE_L2CAP_ECRED=y D "Bluetooth L2CAP Enhanced Credit Flow Con"
+BT_6LOWPAN=m D "Bluetooth 6LoWPAN support"
+BT_DEBUGFS=y D "Export Bluetooth internals in debugfs"
+FIB_RULES=y S <- IP_MULTIPLE_TABLES(D)
+WIRELESS=y S <- WLAN(D) "Wireless"
+WEXT_CORE=y S <- CFG80211_WEXT(D)
+CFG80211=m D "cfg80211 - wireless configuration API"
+CFG80211_REQUIRE_SIGNED_REGDB=y H needs=CFG80211_CERTIFICATION_ONUS "require regdb signature"
+CFG80211_USE_KERNEL_REGDB_KEYS=y H needs=CFG80211_CERTIFICATION_ONUS "allow regdb keys shipped with the kernel"
+CFG80211_DEFAULT_PS=y D "enable powersave by default"
+CFG80211_CRDA_SUPPORT=y H needs=EXPERT "support CRDA"
+CFG80211_WEXT=y D "cfg80211 wireless extensions compatibili"
+MAC80211=m D "Generic IEEE 802.11 Networking Stack (ma"
+MAC80211_HAS_RC=y S <- MAC80211_RC_MINSTREL(H)
+MAC80211_RC_MINSTREL=y H needs=EXPERT "Minstrel"
+MAC80211_RC_DEFAULT_MINSTREL=y C "Minstrel"
+MAC80211_LEDS=y S <- ATH5K(D), ATH9K(D) "Enable LED triggers"
+RFKILL=y D "RF switch subsystem support"
+RFKILL_INPUT=y H needs=EXPERT "RF switch input support"
+DST_CACHE=y S <- NET_IP_TUNNEL(S<-NET_IPIP(D),NET_IPGRE(D),IPV6_SIT(D)), IPV6_TUNNEL(D), OPENVSWITCH(D)
+GRO_CELLS=y S <- NET_IP_TUNNEL(S<-NET_IPIP(D),NET_IPGRE(D),IPV6_SIT(D)), IPV6_TUNNEL(D), VXLAN(D)
+NET_SOCK_MSG=y S <- BPF_SYSCALL(D)
+NET_DEVLINK=y S <- BNXT(D)
+PAGE_POOL=y S <- BPF_SYSCALL(D), VETH(D), BNXT(D)
+FAILOVER=y S <- NET_FAILOVER(S<-VIRTIO_NET(D)) "Generic failover module"
+ETHTOOL_NETLINK=y D "Netlink interface for ethtool"
+PCI=y D "PCI support"
+PCIEPORTBUS=y D "PCI Express Port Bus support"
+PCIEASPM=y H needs=EXPERT "PCI Express ASPM control"
+PCIEASPM_DEFAULT=y C "BIOS default"
+PCI_MSI=y D "Message Signaled Interrupts (MSI and MSI"
+PCI_QUIRKS=y H needs=EXPERT "Enable PCI quirk workarounds"
+PCI_ATS=y S <- PCI_IOV(D)
+PCI_IOV=y D "PCI IOV support"
+VGA_ARB=y H needs=EXPERT,S390 "VGA Arbitration"
+HOTPLUG_PCI=y D "Support for PCI Hotplug"
+AUXILIARY_BUS=y S <- BNXT(D), DRM_I915(D)
+DEVTMPFS=y D "Maintain a devtmpfs filesystem to mount "
+DEVTMPFS_MOUNT=y D "Automount devtmpfs at /dev, after the ke"
+STANDALONE=y D "Select only drivers that don't need comp"
+PREVENT_FIRMWARE_BUILD=y D "Disable drivers features which enable cu"
+FW_LOADER=y S <- CFG80211(D), BNX2X(D), BNXT(D), R8169(D), BRCMSMAC(D), BRCMFMAC_SDIO(D), BRCMFMAC_USB(D), BRCMFMAC_PCIE(D), RT2X00_LIB_FIRMWARE(S<-RT2800PCI(D)), SND_HDA_CODEC_CA0132_DSP(D) "Firmware loading facility"
+FW_CACHE=y D "Enable firmware caching during suspend"
+ALLOW_DEV_COREDUMP=y H needs=EXPERT "Allow device coredump"
+REGMAP=y S <- EEPROM_AT24(D)
+REGMAP_I2C=m S <- EEPROM_AT24(D)
+DMA_SHARED_BUFFER=y S <- VIDEOBUF2_VMALLOC(S<-USB_GSPCA(D),USB_PWC(D),USB_S2255(D),USB_VIDEO_CLASS(D)), DRM(D), SYNC_FILE(S<-DRM(D),DRM_I915(D))
+FIRMWARE_MEMMAP=y H needs=EXPERT "Add firmware-provided memory map to sysf"
+DMIID=y D "Export DMI identification via sysfs to u"
+DMI_SCAN_MACHINE_NON_EFI_FALLBACK=y S <- DMI(H)
+SYSFB=y S <- SYSFB_SIMPLEFB(D), FB_VESA(D), FB_EFI(D)
+SYSFB_SIMPLEFB=y D "Mark VGA/VBE/EFI FB as generic system fr"
+EFI_DXE_MEM_ATTRIBUTES=y D "Adjust memory attributes in EFISTUB"
+EFI_RUNTIME_WRAPPERS=y S <- EFI(D)
+EFI_CUSTOM_SSDT_OVERLAYS=y D "Load custom ACPI SSDT overlay from an EF"
+PNP=y S <- ACPI(D) "Plug and Play support"
+PNP_DEBUG_MESSAGES=y D "PNP debugging messages"
+BLK_DEV=y D "Block devices"
+CDROM=y S <- BLK_DEV_SR(D)
+BLK_DEV_RAM=y D "RAM block device support"
+VIRTIO_BLK=y D "Virtio block driver"
+NVME_CORE=y S <- BLK_DEV_NVME(D)
+BLK_DEV_NVME=y D "NVM Express block device"
+EEPROM_AT24=m D "I2C EEPROMs / RAMs / ROMs from most vend"
+EEPROM_93CX6=m S <- RT2800PCI(D) "EEPROM 93CX6 support"
+SCSI_COMMON=y S <- SCSI(S<-ATA(D))
+SCSI=y S <- ATA(D) "SCSI device support"
+SCSI_DMA=y S <- SCSI(S<-ATA(D))
+SCSI_PROC_FS=y D "legacy /proc/scsi/ support"
+BLK_DEV_SD=y D "SCSI disk support"
+BLK_DEV_SR=y D "SCSI CDROM support"
+BLK_DEV_BSG=y D "/dev/bsg support (SG v4)"
+SCSI_LOWLEVEL=y D "SCSI low-level drivers"
+SCSI_VIRTIO=y D "virtio-scsi support"
+ATA=y D "Serial ATA and Parallel ATA drivers (lib"
+SATA_HOST=y S <- SATA_AHCI(D), ATA_PIIX(D)
+PATA_TIMINGS=y S <- ATA_ACPI(D)
+ATA_VERBOSE_ERROR=y D "Verbose ATA error reporting"
+ATA_FORCE=y H needs=EXPERT ""libata.force=" kernel parameter support"
+ATA_ACPI=y D "ATA ACPI Support"
+SATA_PMP=y D "SATA Port Multiplier support"
+SATA_AHCI=y D "AHCI SATA support"
+ATA_SFF=y D "ATA SFF support (for legacy IDE and PATA"
+ATA_BMDMA=y D "ATA BMDMA support"
+ATA_PIIX=y D "Intel ESB, ICH, PIIX3, PIIX4 PATA/SATA s"
+PATA_SCH=y D "Intel SCH PATA support"
+MD=y D "Multiple devices driver support (RAID an"
+BLK_DEV_MD=y D "RAID support"
+MD_AUTODETECT=y D "Autodetect RAID arrays during kernel boo"
+MD_BITMAP_FILE=y D "MD bitmap file support (deprecated)"
+MD_LINEAR=y D "Linear (append) mode (deprecated)"
+MD_RAID0=y D "RAID-0 (striping) mode"
+MD_RAID1=y D "RAID-1 (mirroring) mode"
+MD_RAID10=y D "RAID-10 (mirrored striping) mode"
+MD_RAID456=y D "RAID-4/RAID-5/RAID-6 mode"
+MD_MULTIPATH=y D "Multipath I/O support (deprecated)"
+MD_FAULTY=y D "Faulty test module for MD (deprecated)"
+BLK_DEV_DM_BUILTIN=y S <- BLK_DEV_DM(D)
+BLK_DEV_DM=y D "Device mapper support"
+DM_BUFIO=y S <- DM_PERSISTENT_DATA(S<-DM_THIN_PROVISIONING(D)), DM_SNAPSHOT(D)
+DM_BIO_PRISON=m S <- DM_THIN_PROVISIONING(D)
+DM_PERSISTENT_DATA=m S <- DM_THIN_PROVISIONING(D)
+DM_CRYPT=y D "Crypt target support"
+DM_SNAPSHOT=y D "Snapshot target"
+DM_THIN_PROVISIONING=m D "Thin provisioning target"
+DM_MIRROR=y D "Mirror target"
+DM_ZERO=y D "Zero target"
+NETDEVICES=y D "Network device support"
+MII=y S <- PCNET32(D), ATL2(D), ATL1(D), ATL1E(D), ATL1C(D), E100(D), JME(D), 8139CP(D), 8139TOO(D), USB_PEGASUS(D), USB_RTL8150(D), USB_RTL8152(D), USB_USBNET(D)
+NET_CORE=y D "Network core driver support"
+BONDING=m D "Bonding driver support"
+DUMMY=m D "Dummy net driver support"
+NET_TEAM=m D "Ethernet team driver support"
+NET_TEAM_MODE_BROADCAST=m D "Broadcast mode support"
+NET_TEAM_MODE_ROUNDROBIN=m D "Round-robin mode support"
+NET_TEAM_MODE_RANDOM=m D "Random mode support"
+NET_TEAM_MODE_ACTIVEBACKUP=m D "Active-backup mode support"
+NET_TEAM_MODE_LOADBALANCE=m D "Load-balance mode support"
+MACVLAN=y D "MAC-VLAN support"
+VXLAN=m D "Virtual eXtensible Local Area Network (V"
+NETCONSOLE=y D "Network console logging support"
+TUN=m D "Universal TUN/TAP device driver support"
+VETH=y D "Virtual ethernet pair device"
+VIRTIO_NET=y D "Virtio network driver"
+ETHERNET=y D "Ethernet driver support"
+MDIO=m S <- ALX(D), BNX2X(D)
+NET_VENDOR_3COM=y D "3Com devices"
+TYPHOON=m D "3cr990 series "Typhoon" support"
+NET_VENDOR_ADAPTEC=y D "Adaptec devices"
+NET_VENDOR_AGERE=y D "Agere devices"
+NET_VENDOR_ALACRITECH=y D "Alacritech devices"
+NET_VENDOR_ALTEON=y D "Alteon devices"
+NET_VENDOR_AMAZON=y D "Amazon Devices"
+NET_VENDOR_AMD=y D "AMD devices"
+PCNET32=m D "AMD PCnet32 PCI support"
+NET_VENDOR_AQUANTIA=y D "aQuantia devices"
+NET_VENDOR_ARC=y D "ARC devices"
+NET_VENDOR_ASIX=y D "Asix devices"
+NET_VENDOR_ATHEROS=y D "Atheros devices"
+ATL2=m D "Atheros L2 Fast Ethernet support"
+ATL1=m D "Atheros/Attansic L1 Gigabit Ethernet sup"
+ATL1E=m D "Atheros L1E Gigabit Ethernet support"
+ATL1C=m D "Atheros L1C Gigabit Ethernet support"
+ALX=m D "Qualcomm Atheros AR816x/AR817x support"
+NET_VENDOR_BROADCOM=y D "Broadcom devices"
+TIGON3=m D "Broadcom Tigon3 support"
+TIGON3_HWMON=y D "Broadcom Tigon3 HWMON support"
+BNX2X=m D "Broadcom NetXtremeII 10Gb support"
+BNX2X_SRIOV=y D "Broadcom 578xx and 57712 SR-IOV support"
+BNXT=m D "Broadcom NetXtreme-C/E support"
+BNXT_SRIOV=y D "Broadcom NetXtreme-C/E SR-IOV support"
+BNXT_FLOWER_OFFLOAD=y D "TC Flower offload support for NetXtreme-"
+BNXT_HWMON=y D "Broadcom NetXtreme-C/E HWMON support"
+NET_VENDOR_CADENCE=y D "Cadence devices"
+NET_VENDOR_CAVIUM=y D "Cavium ethernet drivers"
+NET_VENDOR_CHELSIO=y D "Chelsio devices"
+NET_VENDOR_CISCO=y D "Cisco devices"
+NET_VENDOR_CORTINA=y D "Cortina Gemini devices"
+NET_VENDOR_DAVICOM=y D "Davicom devices"
+NET_VENDOR_DEC=y D "Digital Equipment devices"
+NET_VENDOR_DLINK=y D "D-Link devices"
+DL2K=m D "DL2000/TC902x/IP1000A-based Gigabit Ethe"
+NET_VENDOR_EMULEX=y D "Emulex devices"
+NET_VENDOR_ENGLEDER=y D "Engleder devices"
+NET_VENDOR_EZCHIP=y D "EZchip devices"
+NET_VENDOR_FUNGIBLE=y D "Fungible devices"
+NET_VENDOR_GOOGLE=y D "Google Devices"
+NET_VENDOR_HUAWEI=y D "Huawei devices"
+NET_VENDOR_I825XX=y D "Intel (82586/82593/82596) devices"
+NET_VENDOR_INTEL=y D "Intel devices"
+E100=y D "Intel(R) PRO/100+ support"
+E1000=y D "Intel(R) PRO/1000 Gigabit Ethernet suppo"
+E1000E=y D "Intel(R) PRO/1000 PCI-Express Gigabit Et"
+E1000E_HWTS=y D "Support HW cross-timestamp on PCH device"
+IGB=y D "Intel(R) 82575/82576 PCI-Express Gigabit"
+IGB_HWMON=y D "Intel(R) PCI-Express Gigabit adapters HW"
+IGBVF=m D "Intel(R) 82576 Virtual Function Ethernet"
+IGC=m D "Intel(R) Ethernet Controller I225-LM/I22"
+JME=m D "JMicron(R) PCI-Express Gigabit Ethernet "
+NET_VENDOR_LITEX=y D "LiteX devices"
+NET_VENDOR_MARVELL=y D "Marvell devices"
+SKGE=m D "Marvell Yukon Gigabit Ethernet support"
+SKY2=m D "Marvell Yukon 2 support"
+NET_VENDOR_MELLANOX=y D "Mellanox devices"
+NET_VENDOR_MICREL=y D "Micrel devices"
+NET_VENDOR_MICROCHIP=y D "Microchip devices"
+NET_VENDOR_MICROSEMI=y D "Microsemi devices"
+NET_VENDOR_MICROSOFT=y D "Microsoft Network Devices"
+NET_VENDOR_MYRI=y D "Myricom devices"
+NET_VENDOR_NI=y D "National Instruments Devices"
+NET_VENDOR_NATSEMI=y D "National Semiconductor devices"
+NET_VENDOR_NETERION=y D "Neterion (Exar) devices"
+NET_VENDOR_NETRONOME=y D "Netronome(R) devices"
+NET_VENDOR_8390=y D "National Semiconductor 8390 devices"
+NET_VENDOR_NVIDIA=y D "NVIDIA devices"
+NET_VENDOR_OKI=y D "OKI Semiconductor devices"
+NET_VENDOR_PACKET_ENGINES=y D "Packet Engines devices"
+NET_VENDOR_PENSANDO=y D "Pensando devices"
+NET_VENDOR_QLOGIC=y D "QLogic devices"
+NET_VENDOR_BROCADE=y D "QLogic BR-series devices"
+NET_VENDOR_QUALCOMM=y D "Qualcomm devices"
+NET_VENDOR_RDC=y D "RDC devices"
+NET_VENDOR_REALTEK=y D "Realtek devices"
+8139CP=m D "RealTek RTL-8139 C+ PCI Fast Ethernet Ad"
+8139TOO=m D "RealTek RTL-8129/8130/8139 PCI Fast Ethe"
+8139TOO_PIO=y D "Use PIO instead of MMIO"
+R8169=m D "Realtek 8169/8168/8101/8125 ethernet sup"
+NET_VENDOR_RENESAS=y D "Renesas devices"
+NET_VENDOR_ROCKER=y D "Rocker devices"
+NET_VENDOR_SAMSUNG=y D "Samsung Ethernet devices"
+NET_VENDOR_SEEQ=y D "SEEQ devices"
+NET_VENDOR_SILAN=y D "Silan devices"
+NET_VENDOR_SIS=y D "Silicon Integrated Systems (SiS) devices"
+NET_VENDOR_SOLARFLARE=y D "Solarflare devices"
+NET_VENDOR_SMSC=y D "SMC (SMSC)/Western Digital devices"
+NET_VENDOR_SOCIONEXT=y D "Socionext ethernet drivers"
+NET_VENDOR_STMICRO=y D "STMicroelectronics devices"
+NET_VENDOR_SUN=y D "Sun devices"
+NET_VENDOR_SYNOPSYS=y D "Synopsys devices"
+NET_VENDOR_TEHUTI=y D "Tehuti devices"
+NET_VENDOR_TI=y D "Texas Instruments (TI) devices"
+NET_VENDOR_VERTEXCOM=y D "Vertexcom devices"
+NET_VENDOR_VIA=y D "VIA devices"
+NET_VENDOR_WANGXUN=y D "Wangxun devices"
+NET_VENDOR_WIZNET=y D "WIZnet devices"
+NET_VENDOR_XILINX=y D "Xilinx devices"
+PHYLINK=m S <- USB_NET_AX8817X(D)
+PHYLIB=m S <- TIGON3(D), R8169(D), PHYLINK(S<-USB_NET_AX8817X(D)), USB_NET_AX88179_178A(D), USB_NET_SMSC95XX(D) "PHY Device support and infrastructure"
+SWPHY=y S <- PHYLINK(S<-USB_NET_AX8817X(D))
+AX88796B_PHY=m S <- USB_NET_AX8817X(D) "Asix PHYs"
+REALTEK_PHY=m S <- R8169(D) "Realtek PHYs"
+SMSC_PHY=m S <- USB_NET_SMSC95XX(D) "SMSC PHYs"
+MDIO_DEVICE=y S <- PHYLIB(S<-TIGON3(D),R8169(D),USB_NET_AX88179_178A(D),USB_NET_SMSC95XX(D)) "MDIO bus device drivers"
+MDIO_DEVRES=m S <- PHYLIB(S<-TIGON3(D),R8169(D),USB_NET_AX88179_178A(D),USB_NET_SMSC95XX(D))
+PPP=m D "PPP (point-to-point protocol) support"
+PPP_BSDCOMP=m D "PPP BSD-Compress compression"
+PPP_DEFLATE=m D "PPP Deflate compression"
+PPP_FILTER=y D "PPP filtering"
+PPP_MULTILINK=y D "PPP multilink support"
+PPPOE=m D "PPP over Ethernet"
+PPPOE_HASH_BITS_4=y C "4 bits (16 buckets)"
+PPP_ASYNC=m D "PPP support for async serial ports"
+PPP_SYNC_TTY=m D "PPP support for sync tty ports"
+SLIP=m D "SLIP (serial line) support"
+SLHC=m S <- PPP(D), SLIP_COMPRESSED(D)
+SLIP_COMPRESSED=y D "CSLIP compressed headers"
+SLIP_SMART=y D "Keepalive and linefill"
+SLIP_MODE_SLIP6=y D "Six bit SLIP encapsulation"
+USB_NET_DRIVERS=m D "USB Network Adapters"
+USB_KAWETH=m D "USB KLSI KL5USB101-based ethernet device"
+USB_PEGASUS=m D "USB Pegasus/Pegasus-II based ethernet de"
+USB_RTL8150=m D "USB RTL8150 based ethernet device suppor"
+USB_RTL8152=m D "Realtek RTL8152/RTL8153 Based USB Ethern"
+USB_USBNET=m D "Multi-purpose USB Networking Framework"
+USB_NET_AX8817X=m D "ASIX AX88xxx Based USB 2.0 Ethernet Adap"
+USB_NET_AX88179_178A=m D "ASIX AX88179/178A USB 3.0/2.0 to Gigabit"
+USB_NET_CDCETHER=m S <- USB_NET_CDC_NCM(D), USB_NET_RNDIS_HOST(D), USB_NET_ZAURUS(D) "CDC Ethernet support (smart devices such"
+USB_NET_CDC_EEM=m D "CDC EEM support"
+USB_NET_CDC_NCM=m D "CDC NCM support"
+USB_NET_DM9601=m D "Davicom DM96xx based USB 10/100 ethernet"
+USB_NET_SMSC75XX=m D "SMSC LAN75XX based USB 2.0 gigabit ether"
+USB_NET_SMSC95XX=m D "SMSC LAN95XX based USB 2.0 10/100 ethern"
+USB_NET_NET1080=m D "NetChip 1080 based cables (Laplink, ...)"
+USB_NET_MCS7830=m D "MosChip MCS7830 based Ethernet adapters"
+USB_NET_RNDIS_HOST=m D "Host for RNDIS and ActiveSync devices"
+USB_NET_CDC_SUBSET_ENABLE=m S <- USB_ALI_M5632(D), USB_AN2720(D), USB_BELKIN(D), USB_ARMLINUX(D), USB_KC2190(D)
+USB_NET_CDC_SUBSET=m D "Simple USB Network Links (CDC Ethernet s"
+USB_ALI_M5632=y D "ALi M5632 based 'USB 2.0 Data Link' cabl"
+USB_AN2720=y D "AnchorChips 2720 based cables (Xircom PG"
+USB_BELKIN=y D "eTEK based host-to-host cables (Advance,"
+USB_ARMLINUX=y D "Embedded ARM Linux links (iPaq, ...)"
+USB_KC2190=y D "KT Technology KC2190 based cables (Insta"
+USB_NET_ZAURUS=m D "Sharp Zaurus (stock ROMs) and compatible"
+WLAN=y D "Wireless LAN"
+WLAN_VENDOR_ADMTEK=y D "ADMtek devices"
+ATH_COMMON=m S <- ATH5K(D), ATH9K_COMMON(S<-ATH9K(D))
+WLAN_VENDOR_ATH=y D "Atheros/Qualcomm devices"
+ATH5K=m D "Atheros 5xxx wireless cards support"
+ATH5K_PCI=y S <- ATH5K(D) "Atheros 5xxx PCI bus support"
+ATH9K_HW=m S <- ATH9K(D)
+ATH9K_COMMON=m S <- ATH9K(D)
+ATH9K_BTCOEX_SUPPORT=y D "Atheros bluetooth coexistence support"
+ATH9K=m D "Atheros 802.11n wireless cards support"
+ATH9K_PCI=y D "Atheros ath9k PCI/PCIe bus support"
+ATH9K_RFKILL=y H needs=EXPERT "Atheros ath9k rfkill support"
+ATH9K_PCOEM=y H needs=EXPERT "Atheros ath9k support for PC OEM cards"
+WLAN_VENDOR_ATMEL=y D "Atmel devices"
+WLAN_VENDOR_BROADCOM=y D "Broadcom devices"
+BRCMUTIL=m S <- BRCMSMAC(D), BRCMFMAC(D)
+BRCMSMAC=m D "Broadcom IEEE802.11n PCIe SoftMAC WLAN d"
+BRCMFMAC=m D "Broadcom FullMAC WLAN driver"
+BRCMFMAC_PROTO_BCDC=y S <- BRCMFMAC_SDIO(D), BRCMFMAC_USB(D)
+BRCMFMAC_PROTO_MSGBUF=y S <- BRCMFMAC_PCIE(D)
+BRCMFMAC_SDIO=y D "SDIO bus interface support for FullMAC d"
+BRCMFMAC_USB=y D "USB bus interface support for FullMAC dr"
+BRCMFMAC_PCIE=y D "PCIE bus interface support for FullMAC d"
+WLAN_VENDOR_CISCO=y D "Cisco devices"
+WLAN_VENDOR_INTEL=y D "Intel devices"
+WLAN_VENDOR_INTERSIL=y D "Intersil devices"
+WLAN_VENDOR_MARVELL=y D "Marvell devices"
+WLAN_VENDOR_MEDIATEK=y D "MediaTek devices"
+MT7601U=m D "MediaTek MT7601U (USB) support"
+WLAN_VENDOR_MICROCHIP=y D "Microchip devices"
+WLAN_VENDOR_PURELIFI=y D "pureLiFi devices"
+WLAN_VENDOR_RALINK=y D "Ralink devices"
+RT2X00=m D "Ralink driver support"
+RT2800PCI=m D "Ralink rt27xx/rt28xx/rt30xx (PCI/PCIe/PC"
+RT2800PCI_RT33XX=y D "rt2800pci - Include support for rt33xx d"
+RT2800PCI_RT35XX=y D "rt2800pci - Include support for rt35xx d"
+RT2800PCI_RT53XX=y D "rt2800pci - Include support for rt53xx d"
+RT2800PCI_RT3290=y D "rt2800pci - Include support for rt3290 d"
+RT2800_LIB=m S <- RT2800PCI(D), RT2800_LIB_MMIO(S<-RT2800PCI(D))
+RT2800_LIB_MMIO=m S <- RT2800PCI(D)
+RT2X00_LIB_MMIO=m S <- RT2800PCI(D), RT2800_LIB_MMIO(S<-RT2800PCI(D))
+RT2X00_LIB_PCI=m S <- RT2800PCI(D)
+RT2X00_LIB=m S <- RT2X00_LIB_PCI(S<-RT2800PCI(D))
+RT2X00_LIB_FIRMWARE=y S <- RT2800PCI(D)
+RT2X00_LIB_CRYPTO=y S <- RT2800PCI(D)
+WLAN_VENDOR_REALTEK=y D "Realtek devices"
+RTL_CARDS=m D "Realtek rtlwifi family of devices"
+WLAN_VENDOR_RSI=y D "Redpine Signals Inc devices"
+WLAN_VENDOR_SILABS=y D "Silicon Laboratories devices"
+WLAN_VENDOR_ST=y D "STMicroelectronics devices"
+WLAN_VENDOR_TI=y D "Texas Instrument devices"
+WLAN_VENDOR_ZYDAS=y D "ZyDAS devices"
+WLAN_VENDOR_QUANTENNA=y D "Quantenna wireless cards support"
+NET_FAILOVER=y S <- VIRTIO_NET(D) "Failover driver"
+ISDN=y D "ISDN support"
+INPUT=y S <- VT(H), DRM_I915(D) "Generic input layer (needed for keyboard"
+INPUT_LEDS=y D "Export input device LEDs in sysfs"
+INPUT_FF_MEMLESS=y S <- HID_MICROSOFT(D) "Support for memoryless force-feedback de"
+INPUT_VIVALDIFMAP=y S <- KEYBOARD_ATKBD(D)
+INPUT_MOUSEDEV=y D "Mouse interface"
+INPUT_EVDEV=y D "Event interface"
+INPUT_KEYBOARD=y D "Keyboards"
+KEYBOARD_ATKBD=y D "AT keyboard"
+INPUT_MOUSE=y D "Mice"
+MOUSE_PS2=y D "PS/2 mouse"
+MOUSE_PS2_ALPS=y H needs=EXPERT "ALPS PS/2 mouse protocol extension"
+MOUSE_PS2_BYD=y H needs=EXPERT "BYD PS/2 mouse protocol extension"
+MOUSE_PS2_LOGIPS2PP=y H needs=EXPERT "Logitech PS/2++ mouse protocol extension"
+MOUSE_PS2_SYNAPTICS=y H needs=EXPERT "Synaptics PS/2 mouse protocol extension"
+MOUSE_PS2_SYNAPTICS_SMBUS=y H needs=EXPERT "Synaptics PS/2 SMbus companion"
+MOUSE_PS2_CYPRESS=y H needs=EXPERT "Cypress PS/2 mouse protocol extension"
+MOUSE_PS2_LIFEBOOK=y H needs=EXPERT "Fujitsu Lifebook PS/2 mouse protocol ext"
+MOUSE_PS2_TRACKPOINT=y H needs=EXPERT "IBM Trackpoint PS/2 mouse protocol exten"
+MOUSE_PS2_FOCALTECH=y H needs=EXPERT "FocalTech PS/2 mouse protocol extension"
+MOUSE_PS2_SMBUS=y S <- MOUSE_PS2_SYNAPTICS_SMBUS(H)
+INPUT_TABLET=y D "Tablets"
+INPUT_TOUCHSCREEN=y D "Touchscreens"
+TOUCHSCREEN_USB_COMPOSITE=m D "USB Touchscreen Driver"
+TOUCHSCREEN_USB_EGALAX=y H needs=EXPERT "eGalax, eTurboTouch CT-410/510/700 devic"
+TOUCHSCREEN_USB_PANJIT=y H needs=EXPERT "PanJit device support"
+TOUCHSCREEN_USB_3M=y H needs=EXPERT "3M/Microtouch EX II series device suppor"
+TOUCHSCREEN_USB_ITM=y H needs=EXPERT "ITM device support"
+TOUCHSCREEN_USB_ETURBO=y H needs=EXPERT "eTurboTouch (non-eGalax compatible) devi"
+TOUCHSCREEN_USB_GUNZE=y H needs=EXPERT "Gunze AHL61 device support"
+TOUCHSCREEN_USB_DMC_TSC10=y H needs=EXPERT "DMC TSC-10/25 device support"
+TOUCHSCREEN_USB_IRTOUCH=y H needs=EXPERT "IRTOUCHSYSTEMS/UNITOP device support"
+TOUCHSCREEN_USB_IDEALTEK=y H needs=EXPERT "IdealTEK URTC1000 device support"
+TOUCHSCREEN_USB_GENERAL_TOUCH=y H needs=EXPERT "GeneralTouch Touchscreen device support"
+TOUCHSCREEN_USB_GOTOP=y H needs=EXPERT "GoTop Super_Q2/GogoPen/PenPower tablet d"
+TOUCHSCREEN_USB_JASTEC=y H needs=EXPERT "JASTEC/DigiTech DTR-02U USB touch contro"
+TOUCHSCREEN_USB_ELO=y H needs=EXPERT "Elo TouchSystems 2700 IntelliTouch contr"
+TOUCHSCREEN_USB_E2I=y H needs=EXPERT "e2i Touchscreen controller (e.g. from Mi"
+TOUCHSCREEN_USB_ZYTRONIC=y H needs=EXPERT "Zytronic controller"
+TOUCHSCREEN_USB_ETT_TC45USB=y H needs=EXPERT "ET&T USB series TC4UM/TC5UH touchscreen "
+TOUCHSCREEN_USB_NEXIO=y H needs=EXPERT "NEXIO/iNexio device support"
+TOUCHSCREEN_USB_EASYTOUCH=y H needs=EXPERT "EasyTouch USB Touch controller device su"
+INPUT_MISC=y D "Miscellaneous devices"
+INPUT_UINPUT=y D "User level driver support"
+SERIO=y S <- KEYBOARD_ATKBD(D), MOUSE_PS2(D) "Serial I/O support"
+SERIO_I8042=y S <- KEYBOARD_ATKBD(D), MOUSE_PS2(D) "i8042 PC Keyboard controller"
+SERIO_SERPORT=y D "Serial port line discipline"
+SERIO_LIBPS2=y S <- KEYBOARD_ATKBD(D), MOUSE_PS2(D) "PS/2 driver library"
+TTY=y H needs=EXPERT "Enable TTY"
+VT=y H needs=EXPERT "Virtual terminal"
+CONSOLE_TRANSLATIONS=y H needs=EXPERT "Enable character translations in console"
+VT_CONSOLE=y H needs=EXPERT "Support for console on virtual terminal"
+VT_HW_CONSOLE_BINDING=y S <- FRAMEBUFFER_CONSOLE(D) "Support for binding and unbinding consol"
+UNIX98_PTYS=y H needs=EXPERT "Unix98 PTY support"
+LEGACY_TIOCSTI=y D "Allow legacy TIOCSTI usage"
+LDISC_AUTOLOAD=y D "Automatically load TTY Line Disciplines"
+SERIAL_EARLYCON=y S <- SERIAL_8250_CONSOLE(D)
+SERIAL_8250=y D "8250/16550 and compatible serial support"
+SERIAL_8250_DEPRECATED_OPTIONS=y D "Support 8250_core.* kernel options (DEPR"
+SERIAL_8250_PNP=y H needs=EXPERT "8250/16550 PNP device support"
+SERIAL_8250_CONSOLE=y D "Console on 8250/16550 and compatible ser"
+SERIAL_8250_PCILIB=y S <- SERIAL_8250_PCI(D)
+SERIAL_8250_PCI=y D "8250/16550 PCI device support"
+SERIAL_8250_EXAR=y D "8250/16550 Exar/Commtech PCI/PCIe device"
+SERIAL_8250_DWLIB=y S <- SERIAL_8250_LPSS(D)
+SERIAL_8250_LPSS=y D "Support for serial ports on Intel LPSS p"
+SERIAL_8250_MID=y D "Support for serial ports on Intel MID pl"
+SERIAL_8250_PERICOM=y D "Support for Pericom and Acces I/O serial"
+SERIAL_CORE=y S <- SERIAL_8250(D)
+SERIAL_CORE_CONSOLE=y S <- SERIAL_8250_CONSOLE(D)
+SERIAL_MCTRL_GPIO=y S <- SERIAL_8250(D)
+HVC_DRIVER=y S <- VIRTIO_CONSOLE(D)
+VIRTIO_CONSOLE=y D "Virtio console"
+HW_RANDOM=y D "Hardware Random Number Generator Core su"
+HW_RANDOM_INTEL=y D "Intel HW Random Number Generator support"
+HW_RANDOM_AMD=y D "AMD HW Random Number Generator support"
+HW_RANDOM_VIA=y D "VIA HW Random Number Generator support"
+HW_RANDOM_VIRTIO=y D "VirtIO Random Number Generator support"
+DEVMEM=y D "/dev/mem virtual device support"
+DEVPORT=y D "/dev/port character device"
+HPET=y D "HPET - High Precision Event Timer"
+HPET_MMAP=y D "Allow mmap of HPET"
+HPET_MMAP_DEFAULT=y D "Enable HPET MMAP access by default"
+I2C=y S <- IGB(D), MEDIA_SUBDRV_AUTOSELECT(D), DRM(D), DRM_I915(D) "I2C support"
+ACPI_I2C_OPREGION=y D "ACPI I2C Operation region support"
+I2C_COMPAT=y D "Enable compatibility bits for old user-s"
+I2C_MUX=m S <- MEDIA_SUBDRV_AUTOSELECT(D) "I2C bus multiplexing support"
+I2C_HELPER_AUTO=y D "Autoselect pertinent helper modules"
+I2C_SMBUS=y S <- I2C_I801(D) "SMBus-specific protocols"
+I2C_ALGOBIT=y S <- IGB(D), DRM_I915(D) "I2C bit-banging interfaces"
+I2C_I801=y D "Intel 82801 (ICH/PCH)"
+PPS=y S <- PTP_1588_CLOCK(D) "PPS support"
+PTP_1588_CLOCK=y D "PTP clock support"
+PTP_1588_CLOCK_KVM=y D "KVM virtual PTP clock"
+PINCTRL=y S <- X86_AMD_PLATFORM_DEVICE(D) "Pin controllers"
+GPIOLIB=y D "GPIO Support"
+GPIO_CDEV=y H needs=EXPERT "Character device (/dev/gpiochipN) suppor"
+GPIO_CDEV_V1=y D "Support GPIO ABI Version 1"
+GPIO_MOCKUP=m D "GPIO Testing Driver"
+GPIO_SIM=m D "GPIO Simulator Module"
+POWER_SUPPLY=y S <- ACPI_AC(D), ACPI_BATTERY(D), HID_WACOM(D) "Power supply class support"
+POWER_SUPPLY_HWMON=y D "Expose power supply sensors as hwmon dev"
+HWMON=y D "Hardware Monitoring support"
+THERMAL=y S <- ACPI_VIDEO(S<-DRM_I915(D)), ACPI_THERMAL(D) "Thermal drivers"
+THERMAL_HWMON=y D "Expose thermal sensors as hwmon device"
+THERMAL_WRITABLE_TRIPS=y S <- X86_PKG_TEMP_THERMAL(D) "Enable writable trip points"
+THERMAL_DEFAULT_GOV_STEP_WISE=y C "step_wise"
+THERMAL_GOV_STEP_WISE=y S <- THERMAL_DEFAULT_GOV_STEP_WISE(C) "Step_wise thermal governor"
+THERMAL_GOV_USER_SPACE=y S <- X86_PKG_TEMP_THERMAL(D) "User_space thermal governor"
+INTEL_TCC=y S <- X86_PKG_TEMP_THERMAL(D)
+X86_PKG_TEMP_THERMAL=m D "X86 package temperature thermal driver"
+WATCHDOG=y D "Watchdog Timer Support"
+WATCHDOG_CORE=m S <- SOFT_WATCHDOG(D) "WatchDog Timer Driver Core"
+WATCHDOG_HANDLE_BOOT_ENABLED=y D "Update boot-enabled watchdog until users"
+SOFT_WATCHDOG=m D "Software watchdog"
+BCMA=m S <- BRCMSMAC(D) "Broadcom specific AMBA"
+BCMA_HOST_PCI=y D "Support for BCMA on PCI-host bus"
+BCMA_DRIVER_PCI=y S <- BCMA_HOST_PCI(D) "BCMA Broadcom PCI core driver"
+BCMA_DRIVER_GMAC_CMN=y D "BCMA Broadcom GBIT MAC COMMON core drive"
+MEDIA_SUPPORT=m D "Multimedia support"
+MEDIA_SUPPORT_FILTER=y D "Filter media drivers"
+MEDIA_SUBDRV_AUTOSELECT=y D "Autoselect ancillary drivers (tuners, se"
+MEDIA_CAMERA_SUPPORT=y D "Cameras and video grabbers"
+VIDEO_DEV=m H needs= "Video4Linux core"
+MEDIA_CONTROLLER=y S <- VIDEO_CAMERA_SENSOR(D) "Media Controller API"
+VIDEO_V4L2_SUBDEV_API=y S <- VIDEO_CAMERA_SENSOR(D)
+V4L2_FWNODE=m S <- VIDEO_CAMERA_SENSOR(D)
+V4L2_ASYNC=m S <- V4L2_FWNODE(S<-VIDEO_CAMERA_SENSOR(D))
+MEDIA_USB_SUPPORT=y D "Media USB Adapters"
+USB_GSPCA=m D "GSPCA based webcams"
+USB_GSPCA_BENQ=m D "Benq USB Camera Driver"
+USB_GSPCA_CONEX=m D "Conexant Camera Driver"
+USB_GSPCA_CPIA1=m D "cpia CPiA (version 1) Camera Driver"
+USB_GSPCA_ETOMS=m D "Etoms USB Camera Driver"
+USB_GSPCA_FINEPIX=m D "Fujifilm FinePix USB V4L2 driver"
+USB_GSPCA_JEILINJ=m D "Jeilin JPEG USB V4L2 driver"
+USB_GSPCA_JL2005BCD=m D "JL2005B/C/D USB V4L2 driver"
+USB_GSPCA_KINECT=m D "Kinect sensor device USB Camera Driver"
+USB_GSPCA_KONICA=m D "Konica USB Camera V4L2 driver"
+USB_GSPCA_MARS=m D "Mars USB Camera Driver"
+USB_GSPCA_MR97310A=m D "Mars-Semi MR97310A USB Camera Driver"
+USB_GSPCA_NW80X=m D "Divio based (NW80x) USB Camera Driver"
+USB_GSPCA_OV519=m D "OV51x / OVFX2 / W996xCF USB Camera Drive"
+USB_GSPCA_OV534=m D "OV534 OV772x USB Camera Driver"
+USB_GSPCA_OV534_9=m D "OV534 OV965x USB Camera Driver"
+USB_GSPCA_PAC207=m D "Pixart PAC207 USB Camera Driver"
+USB_GSPCA_PAC7302=m D "Pixart PAC7302 USB Camera Driver"
+USB_GSPCA_PAC7311=m D "Pixart PAC7311 USB Camera Driver"
+USB_GSPCA_SE401=m D "SE401 USB Camera Driver"
+USB_GSPCA_SN9C2028=m D "SONIX Dual-Mode USB Camera Driver"
+USB_GSPCA_SN9C20X=m D "SN9C20X USB Camera Driver"
+USB_GSPCA_SONIXB=m D "SONIX Bayer USB Camera Driver"
+USB_GSPCA_SONIXJ=m D "SONIX JPEG USB Camera Driver"
+USB_GSPCA_SPCA1528=m D "SPCA1528 USB Camera Driver"
+USB_GSPCA_SPCA500=m D "SPCA500 USB Camera Driver"
+USB_GSPCA_SPCA501=m D "SPCA501 USB Camera Driver"
+USB_GSPCA_SPCA505=m D "SPCA505 USB Camera Driver"
+USB_GSPCA_SPCA506=m D "SPCA506 USB Camera Driver"
+USB_GSPCA_SPCA508=m D "SPCA508 USB Camera Driver"
+USB_GSPCA_SPCA561=m D "SPCA561 USB Camera Driver"
+USB_GSPCA_SQ905=m D "SQ Technologies SQ905 based USB Camera D"
+USB_GSPCA_SQ905C=m D "SQ Technologies SQ905C based USB Camera "
+USB_GSPCA_SQ930X=m D "SQ Technologies SQ930X based USB Camera "
+USB_GSPCA_STK014=m D "Syntek DV4000 (STK014) USB Camera Driver"
+USB_GSPCA_STV0680=m D "STV0680 USB Camera Driver"
+USB_GSPCA_SUNPLUS=m D "SUNPLUS USB Camera Driver"
+USB_GSPCA_T613=m D "T613 (JPEG Compliance) USB Camera Driver"
+USB_GSPCA_TOPRO=m D "TOPRO USB Camera Driver"
+USB_GSPCA_TV8532=m D "TV8532 USB Camera Driver"
+USB_GSPCA_VC032X=m D "VC032X USB Camera Driver"
+USB_GSPCA_VICAM=m D "ViCam USB Camera Driver"
+USB_GSPCA_XIRLINK_CIT=m D "Xirlink C-It USB Camera Driver"
+USB_GSPCA_ZC3XX=m D "ZC3XX USB Camera Driver"
+USB_GL860=m D "GL860 USB Camera Driver"
+USB_M5602=m D "ALi USB m5602 Camera Driver"
+USB_STV06XX=m D "STV06XX USB Camera Driver"
+USB_PWC=m D "USB Philips Cameras"
+USB_PWC_INPUT_EVDEV=y D "USB Philips Cameras input events device "
+USB_S2255=m D "USB Sensoray 2255 video capture device"
+USB_VIDEO_CLASS=m D "USB Video Class (UVC)"
+USB_VIDEO_CLASS_INPUT_EVDEV=y D "UVC input events device support"
+UVC_COMMON=m S <- USB_VIDEO_CLASS(D)
+VIDEOBUF2_CORE=m S <- VIDEOBUF2_VMALLOC(S<-USB_GSPCA(D),USB_PWC(D),USB_S2255(D),USB_VIDEO_CLASS(D))
+VIDEOBUF2_V4L2=m S <- VIDEO_DEV(H)
+VIDEOBUF2_MEMOPS=m S <- VIDEOBUF2_VMALLOC(S<-USB_GSPCA(D),USB_PWC(D),USB_S2255(D),USB_VIDEO_CLASS(D))
+VIDEOBUF2_VMALLOC=m S <- USB_GSPCA(D), USB_PWC(D), USB_S2255(D), USB_VIDEO_CLASS(D)
+VIDEO_CAMERA_SENSOR=y D "Camera sensor devices"
+APERTURE_HELPERS=y S <- DRM_SIMPLEDRM(D), FB_VESA(D), FB_EFI(D), VGA_CONSOLE(H)
+SCREEN_INFO=y S <- SYSFB(S<-SYSFB_SIMPLEFB(D),FB_VESA(D),FB_EFI(D))
+VIDEO_CMDLINE=y S <- DRM(D), FB_CORE(S<-DRM(D),FB(D))
+VIDEO_NOMODESET=y S <- DRM(D)
+AGP=y D "/dev/agpgart (AGP Support)"
+AGP_INTEL=y D "Intel 440LX/BX/GX, I8xx and E7x05 chipse"
+INTEL_GTT=y S <- AGP_INTEL(D), DRM_I915(D)
+DRM=y D "Direct Rendering Manager (XFree86 4.1.0 "
+DRM_MIPI_DSI=y S <- DRM_I915(D)
+DRM_KMS_HELPER=y S <- DRM(D), DRM_I915(D), DRM_VIRTIO_GPU(D), DRM_BOCHS(D), DRM_CIRRUS_QEMU(D), DRM_SIMPLEDRM(D)
+DRM_FBDEV_EMULATION=y D "Enable legacy fbdev support for your mod"
+DRM_DISPLAY_HELPER=m S <- DRM_I915(D)
+DRM_DISPLAY_DP_HELPER=y S <- DRM_I915(D)
+DRM_DISPLAY_HDCP_HELPER=y S <- DRM_I915(D)
+DRM_DISPLAY_HDMI_HELPER=y S <- DRM_I915(D)
+DRM_TTM=y S <- DRM_TTM_HELPER(S<-DRM_BOCHS(D)), DRM_I915(D), DRM_BOCHS(D)
+DRM_BUDDY=m S <- DRM_I915(D)
+DRM_VRAM_HELPER=y S <- DRM_BOCHS(D)
+DRM_TTM_HELPER=y S <- DRM_BOCHS(D)
+DRM_GEM_SHMEM_HELPER=y S <- DRM_VIRTIO_GPU(D), DRM_CIRRUS_QEMU(D), DRM_SIMPLEDRM(D)
+DRM_I915=m D "Intel 8xx/9xx/G3x/G4x/HD Graphics"
+DRM_I915_CAPTURE_ERROR=y D "Enable capturing GPU state following a h"
+DRM_I915_COMPRESS_ERROR=y D "Compress GPU error state"
+DRM_I915_USERPTR=y D "Always enable userptr support"
+DRM_VIRTIO_GPU=y D "Virtio GPU driver"
+DRM_VIRTIO_GPU_KMS=y D "Virtio GPU driver modesetting support"
+DRM_PANEL=y S <- DRM_I915(D)
+DRM_BOCHS=y D "DRM Support for bochs dispi vga interfac"
+DRM_CIRRUS_QEMU=m D "Cirrus driver for QEMU emulated device"
+DRM_SIMPLEDRM=y D "Simple framebuffer driver"
+DRM_PANEL_ORIENTATION_QUIRKS=y S <- DRM(D), FB_EFI(D)
+FB=y D "Support for frame buffer device drivers"
+FB_VESA=y D "VESA VGA graphics support"
+FB_EFI=y D "EFI-based Framebuffer Support"
+FB_CORE=y S <- DRM(D), FB(D)
+FB_NOTIFY=y S <- FB(D)
+FB_DEVICE=y D "Provide legacy /dev/fb* device"
+FB_CFB_FILLRECT=y S <- FB_IOMEM_HELPERS(S<-DRM_I915(D),FB_VESA(D),FB_EFI(D))
+FB_CFB_COPYAREA=y S <- FB_IOMEM_HELPERS(S<-DRM_I915(D),FB_VESA(D),FB_EFI(D))
+FB_CFB_IMAGEBLIT=y S <- FB_IOMEM_HELPERS(S<-DRM_I915(D),FB_VESA(D),FB_EFI(D))
+FB_DEFERRED_IO=y S <- FB_SYSMEM_HELPERS_DEFERRED(S<-DRM(D))
+FB_IOMEM_FOPS=y S <- FB_CORE(S<-DRM(D),FB(D)), FB_IOMEM_HELPERS(S<-DRM_I915(D),FB_VESA(D),FB_EFI(D))
+FB_IOMEM_HELPERS=y S <- DRM_I915(D), FB_VESA(D), FB_EFI(D)
+FB_SYSMEM_HELPERS=y S <- FB_SYSMEM_HELPERS_DEFERRED(S<-DRM(D))
+FB_SYSMEM_HELPERS_DEFERRED=y S <- DRM(D)
+FB_MODE_HELPERS=y D "Enable Video Mode Handling Helpers"
+BACKLIGHT_CLASS_DEVICE=m S <- DRM_I915(D) "Lowlevel Backlight controls"
+HDMI=y S <- DRM(D)
+VGA_CONSOLE=y H needs=4xx,ARC,ARCH_FOOTBRIDGE,ARCH_INTEGRATOR,ARCH_NETWINDER,ARM,ARM64,EXPERT,M68K,MICROBLAZE,OPENRISC,PARISC,PPC_8xx,S390,SPARC,SUPERH,UML "VGA text console"
+FRAMEBUFFER_CONSOLE=y D "Framebuffer Console support"
+FRAMEBUFFER_CONSOLE_DETECT_PRIMARY=y S <- DRM_FBDEV_EMULATION(D) "Map the console to the primary display d"
+SOUND=y D "Sound card support"
+SND=y D "Advanced Linux Sound Architecture"
+SND_PCM=m S <- SND_HDA(S<-SND_HDA_INTEL(D))
+SND_JACK=y S <- SND_HDA(S<-SND_HDA_INTEL(D))
+SND_PCM_TIMER=y H needs=EXPERT "PCM timer interface"
+SND_DYNAMIC_MINORS=y S <- SND_HDA_CODEC_HDMI(D) "Dynamic device file minor numbers"
+SND_SUPPORT_OLD_API=y D "Support old ALSA API"
+SND_PROC_FS=y H needs=EXPERT "Sound Proc FS Support"
+SND_VERBOSE_PROCFS=y D "Verbose procfs contents"
+SND_CTL_FAST_LOOKUP=y H needs=EXPERT "Fast lookup of control elements"
+SND_VMASTER=y S <- SND_HDA(S<-SND_HDA_INTEL(D))
+SND_CTL_LED=m S <- SND_HDA_GENERIC(S<-SND_HDA_CODEC_REALTEK(D),SND_HDA_CODEC_ANALOG(D),SND_HDA_CODEC_SIGMATEL(D),SND_HDA_CODEC_CIRRUS(D),SND_HDA_CODEC_CONEXANT(D),SND_HDA_CODEC_CA0110(D),SND_HDA_CODEC_CMEDIA(D))
+SND_DRIVERS=y D "Generic sound devices"
+SND_PCI=y D "PCI sound devices"
+SND_HDA=m S <- SND_HDA_INTEL(D)
+SND_HDA_GENERIC_LEDS=y S <- SND_HDA_CODEC_REALTEK(D), SND_HDA_CODEC_SIGMATEL(D), SND_HDA_CODEC_CONEXANT(D)
+SND_HDA_INTEL=m D "HD Audio PCI"
+SND_HDA_CODEC_REALTEK=m D "Build Realtek HD-audio codec support"
+SND_HDA_CODEC_ANALOG=m D "Build Analog Devices HD-audio codec supp"
+SND_HDA_CODEC_SIGMATEL=m D "Build IDT/Sigmatel HD-audio codec suppor"
+SND_HDA_CODEC_HDMI=m D "Build HDMI/DisplayPort HD-audio codec su"
+SND_HDA_CODEC_CIRRUS=m D "Build Cirrus Logic codec support"
+SND_HDA_CODEC_CONEXANT=m D "Build Conexant HD-audio codec support"
+SND_HDA_CODEC_CA0110=m D "Build Creative CA0110-IBG codec support"
+SND_HDA_CODEC_CA0132=m D "Build Creative CA0132 codec support"
+SND_HDA_CODEC_CA0132_DSP=y D "Support new DSP code for CA0132 codec"
+SND_HDA_CODEC_CMEDIA=m D "Build C-Media HD-audio codec support"
+SND_HDA_CODEC_SI3054=m D "Build Silicon Labs 3054 HD-modem codec s"
+SND_HDA_GENERIC=m S <- SND_HDA_CODEC_REALTEK(D), SND_HDA_CODEC_ANALOG(D), SND_HDA_CODEC_SIGMATEL(D), SND_HDA_CODEC_CIRRUS(D), SND_HDA_CODEC_CONEXANT(D), SND_HDA_CODEC_CA0110(D), SND_HDA_CODEC_CMEDIA(D) "Enable generic HD-audio codec parser"
+SND_HDA_CORE=m S <- SND_HDA(S<-SND_HDA_INTEL(D))
+SND_HDA_DSP_LOADER=y S <- SND_HDA_CODEC_CA0132_DSP(D)
+SND_HDA_COMPONENT=y S <- SND_HDA_I915(S<-DRM_I915(D))
+SND_HDA_I915=y S <- DRM_I915(D)
+SND_INTEL_NHLT=y S <- SND_INTEL_DSP_CONFIG(S<-SND_HDA_INTEL(D))
+SND_INTEL_DSP_CONFIG=m S <- SND_HDA_INTEL(D)
+SND_INTEL_SOUNDWIRE_ACPI=m S <- SND_INTEL_DSP_CONFIG(S<-SND_HDA_INTEL(D))
+SND_USB=y D "USB sound devices"
+SND_X86=y D "X86 sound devices"
+HID_SUPPORT=y D "HID bus support"
+HID=y S <- BT_HIDP(D), USB_HID(D) "HID bus core support"
+HID_GENERIC=y D "Generic HID driver"
+HID_A4TECH=y D "A4TECH mice"
+HID_APPLE=y D "Apple {i,Power,Mac}Books"
+HID_BELKIN=y D "Belkin Flip KVM and Wireless keyboard"
+HID_CHERRY=y D "Cherry Cymotion keyboard"
+HID_CHICONY=y D "Chicony devices"
+HID_CYPRESS=y D "Cypress mouse and barcode readers"
+HID_EZKEY=y D "Ezkey BTC 8193 keyboard"
+HID_ITE=y D "ITE devices"
+HID_KENSINGTON=y D "Kensington Slimblade Trackball"
+HID_LOGITECH=y D "Logitech devices"
+HID_REDRAGON=y D "Redragon keyboards"
+HID_MICROSOFT=y D "Microsoft non-fully HID-compliant device"
+HID_MONTEREY=y D "Monterey Genius KB29E keyboard"
+HID_WACOM=y D "Wacom Intuos/Graphire tablet support (US"
+USB_HID=y D "USB HID transport layer"
+USB_HIDDEV=y D "/dev/hiddev raw HID device support"
+I2C_HID=y D "I2C HID support"
+USB_OHCI_LITTLE_ENDIAN=y S <- USB_OHCI_HCD_PCI(D)
+USB_SUPPORT=y D "USB support"
+USB_COMMON=y S <- USB(S<-TOUCHSCREEN_USB_COMPOSITE(D))
+USB=y S <- TOUCHSCREEN_USB_COMPOSITE(D) "Support for Host-side USB"
+USB_PCI=y D "PCI based USB host interface"
+USB_DEFAULT_PERSIST=y D "Enable USB persist by default"
+USB_XHCI_HCD=y D "xHCI HCD (USB 3.0) support"
+USB_EHCI_HCD=y D "EHCI HCD (USB 2.0) support"
+USB_EHCI_ROOT_HUB_TT=y D "Root Hub Transaction Translators"
+USB_EHCI_TT_NEWSCHED=y D "Improved Transaction Translator scheduli"
+USB_OHCI_HCD=y D "OHCI HCD (USB 1.1) support"
+USB_OHCI_HCD_PCI=y D "OHCI support for PCI-bus USB controllers"
+USB_UHCI_HCD=y D "UHCI HCD (most Intel and VIA) support"
+USB_STORAGE=y D "USB Mass Storage support"
+USB_SERIAL=y D "USB Serial Converter support"
+USB_SERIAL_CONSOLE=y D "USB Serial Console device support"
+USB_SERIAL_GENERIC=y D "USB Generic Serial Driver"
+USB_SERIAL_FTDI_SIO=y D "USB FTDI Single Port Serial Driver"
+USB_SERIAL_PL2303=y D "USB Prolific 2303 Single Port Serial Dri"
+USB_EZUSB_FX2=y D "Functions for loading firmware on EZUSB "
+MMC=y D "MMC/SD/SDIO card support"
+MMC_BLOCK=y D "MMC block device driver"
+MMC_SDHCI=y D "Secure Digital Host Controller Interface"
+MMC_SDHCI_IO_ACCESSORS=y S <- MMC_SDHCI_PCI(D)
+MMC_SDHCI_PCI=y D "SDHCI support on PCI bus"
+MMC_RICOH_MMC=y D "Ricoh MMC Controller Disabler"
+MMC_SDHCI_ACPI=y D "SDHCI support for ACPI enumerated SDHCI "
+MMC_SDHCI_PLTFM=y D "SDHCI platform and OF driver helper"
+MMC_CQHCI=y S <- MMC_SDHCI_PCI(D) "Command Queue Host Controller Interface "
+NEW_LEDS=y S <- HID_WACOM(D) "LED Support"
+LEDS_CLASS=y S <- SND_HDA_GENERIC(S<-SND_HDA_CODEC_REALTEK(D),SND_HDA_CODEC_ANALOG(D),SND_HDA_CODEC_SIGMATEL(D),SND_HDA_CODEC_CIRRUS(D),SND_HDA_CODEC_CONEXANT(D),SND_HDA_CODEC_CA0110(D),SND_HDA_CODEC_CMEDIA(D)), HID_WACOM(D) "LED Class Support"
+LEDS_TRIGGERS=y S <- MAC80211_LEDS(S<-ATH5K(D),ATH9K(D)), HID_WACOM(D) "LED Trigger support"
+RTC_LIB=y S <- RTC_MC146818_LIB(S<-RTC_DRV_CMOS(D)), RTC_CLASS(D)
+RTC_MC146818_LIB=y S <- RTC_DRV_CMOS(D)
+RTC_CLASS=y D "Real Time Clock"
+RTC_HCTOSYS=y D "Set system time from RTC on startup and "
+RTC_SYSTOHC=y D "Set the RTC time based on NTP synchroniz"
+RTC_NVMEM=y D "RTC non volatile storage support"
+RTC_INTF_SYSFS=y D "/sys/class/rtc/rtcN (sysfs)"
+RTC_INTF_PROC=y D "/proc/driver/rtc (procfs for rtcN)"
+RTC_INTF_DEV=y D "/dev/rtcN (character devices)"
+RTC_DRV_CMOS=y D "PC-style 'CMOS'"
+SYNC_FILE=y S <- DRM(D), DRM_I915(D) "Explicit Synchronization Framework"
+VIRTIO_ANCHOR=y S <- VIRTIO(S<-VIRTIO_CONSOLE(D),DRM_VIRTIO_GPU(D),VIRTIO_PCI(D),VIRTIO_MMIO(D))
+VIRTIO=y S <- VIRTIO_CONSOLE(D), DRM_VIRTIO_GPU(D), VIRTIO_PCI(D), VIRTIO_MMIO(D)
+VIRTIO_PCI_LIB=y S <- VIRTIO_PCI(D)
+VIRTIO_PCI_LIB_LEGACY=y S <- VIRTIO_PCI_LEGACY(D)
+VIRTIO_MENU=y D "Virtio drivers"
+VIRTIO_PCI=y D "PCI driver for virtio devices"
+VIRTIO_PCI_LEGACY=y D "Support for legacy virtio draft 0.9.X an"
+VIRTIO_BALLOON=y D "Virtio balloon driver"
+VIRTIO_INPUT=m D "Virtio input driver"
+VIRTIO_MMIO=y D "Platform bus driver for memory mapped vi"
+VIRTIO_DMA_SHARED_BUFFER=y S <- DRM_VIRTIO_GPU(D)
+VHOST_MENU=y D "VHOST drivers"
+SURFACE_PLATFORMS=y D "Microsoft Surface Platform-Specific Devi"
+X86_PLATFORM_DEVICES=y S <- DRM_I915(D) "X86 Platform Specific Device Drivers"
+ACPI_WMI=m S <- DRM_I915(D) "WMI"
+WMI_BMOF=m D "WMI embedded Binary MOF driver"
+P2SB=y S <- I2C_I801(D)
+COMMON_CLK=y S <- X86_AMD_PLATFORM_DEVICE(D) "Common Clock Framework"
+I8253_LOCK=y S <- PCSPKR_PLATFORM(H)
+IOMMU_SUPPORT=y D "IOMMU Hardware Support"
+IOMMU_DEFAULT_DMA_LAZY=y C "Translated - Lazy"
+IRQ_REMAP=y D "Support for Interrupt Remapping"
+NVMEM=y S <- EEPROM_AT24(D), RTC_NVMEM(D) "NVMEM Support"
+NVMEM_SYSFS=y S <- EEPROM_AT24(D) "/sys/bus/nvmem/devices/*/nvmem (sysfs in"
+FS_IOMAP=y S <- BLOCK(H), EXT4_FS(D), BTRFS_FS(D)
+BUFFER_HEAD=y S <- BLK_DEV_MD(D), EXT4_FS(D), ISO9660_FS(D), FAT_FS(S<-MSDOS_FS(D),VFAT_FS(D))
+LEGACY_DIRECT_IO=y S <- FAT_FS(S<-MSDOS_FS(D),VFAT_FS(D))
+EXT4_FS=y D "The Extended 4 (ext4) filesystem"
+EXT4_USE_FOR_EXT2=y D "Use ext4 for ext2 file systems"
+EXT4_FS_POSIX_ACL=y D "Ext4 POSIX Access Control Lists"
+EXT4_FS_SECURITY=y D "Ext4 Security Labels"
+JBD2=y S <- EXT4_FS(D)
+BTRFS_FS=y D "Btrfs filesystem support"
+BTRFS_FS_POSIX_ACL=y D "Btrfs POSIX Access Control Lists"
+FS_POSIX_ACL=y S <- EXT4_FS_POSIX_ACL(D), BTRFS_FS_POSIX_ACL(D), FUSE_FS(D), TMPFS_POSIX_ACL(D)
+EXPORTFS=y S <- FHANDLE(H), OVERLAY_FS(D)
+FILE_LOCKING=y H needs=EXPERT "Enable POSIX file locking API"
+FS_ENCRYPTION=y D "FS Encryption (Per-file encryption)"
+FS_ENCRYPTION_ALGS=y S <- EXT4_FS(D)
+FSNOTIFY=y S <- DNOTIFY(D), INOTIFY_USER(D)
+DNOTIFY=y D "Dnotify support"
+INOTIFY_USER=y D "Inotify support for userspace"
+AUTOFS_FS=y D "Kernel automounter support (supports v3,"
+FUSE_FS=m D "FUSE (Filesystem in Userspace) support"
+CUSE=m D "Character device in Userspace support"
+OVERLAY_FS=y D "Overlay filesystem support"
+OVERLAY_FS_REDIRECT_ALWAYS_FOLLOW=y D "Overlayfs: follow redirects even if redi"
+NETFS_SUPPORT=y S <- CIFS(D)
+ISO9660_FS=y D "ISO 9660 CDROM file system support"
+ZISOFS=y D "Transparent decompression extension"
+FAT_FS=y S <- MSDOS_FS(D), VFAT_FS(D)
+MSDOS_FS=y D "MSDOS fs support"
+VFAT_FS=y D "VFAT (Windows-95) fs support"
+PROC_FS=y H needs=EXPERT "/proc file system support"
+PROC_KCORE=y D "/proc/kcore support"
+PROC_SYSCTL=y H needs=EXPERT "Sysctl support (/proc/sys)"
+PROC_PAGE_MONITOR=y H needs=EXPERT "Enable /proc page monitoring"
+PROC_CHILDREN=y S <- CHECKPOINT_RESTORE(D) "Include /proc/<pid>/task/<tid>/children "
+KERNFS=y S <- CGROUPS(D)
+SYSFS=y S <- CONFIGFS_FS(S<-GPIO_SIM(D)) "sysfs file system support"
+TMPFS=y S <- DRM_I915(D) "Tmpfs virtual memory file system support"
+TMPFS_POSIX_ACL=y D "Tmpfs POSIX Access Control Lists"
+TMPFS_XATTR=y S <- TMPFS_POSIX_ACL(D) "Tmpfs extended attributes"
+CONFIGFS_FS=m S <- GPIO_SIM(D) "Userspace-driven configuration filesyste"
+EFIVAR_FS=y D "EFI Variable filesystem"
+MISC_FILESYSTEMS=y D "Miscellaneous filesystems"
+ROMFS_FS=m D "ROM file system support"
+ROMFS_BACKED_BY_BLOCK=y C "Block device-backed ROM file system supp"
+NETWORK_FILESYSTEMS=y D "Network File Systems"
+NFS_FS=y D "NFS client support"
+NFS_V2=y D "NFS client support for NFS version 2"
+NFS_V3=y D "NFS client support for NFS version 3"
+NFS_V4=y D "NFS client support for NFS version 4"
+ROOT_NFS=y D "Root file system on NFS"
+GRACE_PERIOD=y S <- LOCKD(S<-NFS_FS(D))
+LOCKD=y S <- NFS_FS(D)
+NFS_COMMON=y S <- NFS_FS(D)
+SUNRPC=y S <- NFS_FS(D)
+SUNRPC_GSS=y S <- RPCSEC_GSS_KRB5(D)
+RPCSEC_GSS_KRB5=y D "Secure RPC: Kerberos V mechanism"
+RPCSEC_GSS_KRB5_ENCTYPES_AES_SHA1=y D "Enable Kerberos enctypes based on AES an"
+CIFS=y D "SMB3 and CIFS support (advanced network "
+CIFS_STATS2=y D "Extended statistics"
+CIFS_ALLOW_INSECURE_LEGACY=y D "Support legacy servers which use less se"
+CIFS_XATTR=y D "CIFS extended attributes"
+CIFS_POSIX=y D "CIFS POSIX Extensions"
+CIFS_DEBUG=y D "Enable CIFS debugging routines"
+NLS=y S <- ACPI(D), USB(S<-TOUCHSCREEN_USB_COMPOSITE(D)), FAT_FS(S<-MSDOS_FS(D),VFAT_FS(D)), CIFS(D) "Native language support"
+NLS_CODEPAGE_437=y D "Codepage 437 (United States, Canada)"
+NLS_CODEPAGE_737=m D "Codepage 737 (Greek)"
+NLS_CODEPAGE_775=m D "Codepage 775 (Baltic Rim)"
+NLS_CODEPAGE_850=m D "Codepage 850 (Europe)"
+NLS_CODEPAGE_852=m D "Codepage 852 (Central/Eastern Europe)"
+NLS_CODEPAGE_855=m D "Codepage 855 (Cyrillic)"
+NLS_CODEPAGE_857=m D "Codepage 857 (Turkish)"
+NLS_CODEPAGE_860=m D "Codepage 860 (Portuguese)"
+NLS_CODEPAGE_861=m D "Codepage 861 (Icelandic)"
+NLS_CODEPAGE_862=m D "Codepage 862 (Hebrew)"
+NLS_CODEPAGE_863=m D "Codepage 863 (Canadian French)"
+NLS_CODEPAGE_864=m D "Codepage 864 (Arabic)"
+NLS_CODEPAGE_865=m D "Codepage 865 (Norwegian, Danish)"
+NLS_CODEPAGE_866=m D "Codepage 866 (Cyrillic/Russian)"
+NLS_CODEPAGE_869=m D "Codepage 869 (Greek)"
+NLS_CODEPAGE_936=m D "Simplified Chinese charset (CP936, GB231"
+NLS_CODEPAGE_950=m D "Traditional Chinese charset (Big5)"
+NLS_CODEPAGE_932=m D "Japanese charsets (Shift-JIS, EUC-JP)"
+NLS_CODEPAGE_949=m D "Korean charset (CP949, EUC-KR)"
+NLS_CODEPAGE_874=m D "Thai charset (CP874, TIS-620)"
+NLS_ISO8859_8=m D "Hebrew charsets (ISO-8859-8, CP1255)"
+NLS_CODEPAGE_1250=m D "Windows CP1250 (Slavic/Central European "
+NLS_CODEPAGE_1251=m D "Windows CP1251 (Bulgarian, Belarusian)"
+NLS_ASCII=m D "ASCII (United States)"
+NLS_ISO8859_1=y D "NLS ISO 8859-1  (Latin 1; Western Europe"
+NLS_ISO8859_2=m D "NLS ISO 8859-2  (Latin 2; Slavic/Central"
+NLS_ISO8859_3=m D "NLS ISO 8859-3  (Latin 3; Esperanto, Gal"
+NLS_ISO8859_4=m D "NLS ISO 8859-4  (Latin 4; old Baltic cha"
+NLS_ISO8859_5=m D "NLS ISO 8859-5  (Cyrillic)"
+NLS_ISO8859_6=m D "NLS ISO 8859-6  (Arabic)"
+NLS_ISO8859_7=m D "NLS ISO 8859-7  (Modern Greek)"
+NLS_ISO8859_9=m D "NLS ISO 8859-9  (Latin 5; Turkish)"
+NLS_ISO8859_13=m D "NLS ISO 8859-13 (Latin 7; Baltic)"
+NLS_ISO8859_14=m D "NLS ISO 8859-14 (Latin 8; Celtic)"
+NLS_ISO8859_15=m D "NLS ISO 8859-15 (Latin 9; Western Europe"
+NLS_KOI8_R=m D "NLS KOI8-R (Russian)"
+NLS_KOI8_U=m D "NLS KOI8-U/RU (Ukrainian, Belarusian)"
+NLS_UTF8=m D "NLS UTF-8"
+NLS_UCS2_UTILS=y S <- CIFS(D)
+IO_WQ=y S <- IO_URING(H)
+KEYS=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)), FS_ENCRYPTION(D), NFS_V4(D), CIFS(D) "Enable access key retention support"
+ENCRYPTED_KEYS=y D "ENCRYPTED KEYS"
+PROC_MEM_ALWAYS_FORCE=y C "Traditional /proc/pid/mem behavior"
+SECURITY=y D "Enable different security models"
+SECURITY_PATH=y S <- SECURITY_LANDLOCK(D) "Security hooks for pathname based access"
+SECURITY_LANDLOCK=y D "Landlock support"
+INTEGRITY=y D "Integrity subsystem"
+DEFAULT_SECURITY_DAC=y C "Unix Discretionary Access Controls"
+INIT_STACK_ALL_ZERO=y C "zero-init everything (strongest and safe"
+RANDSTRUCT_NONE=y C "Disable structure layout randomization"
+XOR_BLOCKS=y S <- BTRFS_FS(D), ASYNC_XOR(S<-MD_RAID456(D))
+ASYNC_CORE=y S <- ASYNC_MEMCPY(S<-MD_RAID456(D)), ASYNC_XOR(S<-MD_RAID456(D)), ASYNC_PQ(S<-MD_RAID456(D)), ASYNC_RAID6_RECOV(S<-MD_RAID456(D))
+ASYNC_MEMCPY=y S <- MD_RAID456(D)
+ASYNC_XOR=y S <- MD_RAID456(D), ASYNC_RAID6_RECOV(S<-MD_RAID456(D))
+ASYNC_PQ=y S <- MD_RAID456(D), ASYNC_RAID6_RECOV(S<-MD_RAID456(D))
+ASYNC_RAID6_RECOV=y S <- MD_RAID456(D)
+CRYPTO=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)), XFRM_ALGO(S<-XFRM_USER(D),NET_KEY(D)), XFRM_AH(S<-INET_AH(D),INET6_AH(D)), XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), XFRM_IPCOMP(S<-INET_IPCOMP(D),INET6_IPCOMP(D)), IP_SCTP(D), TIPC_CRYPTO(D), BT(D), MAC80211(D), DM_CRYPT(D), USB_RTL8152(D), EXT4_FS(D), JBD2(S<-EXT4_FS(D)), BTRFS_FS(D), FS_ENCRYPTION(D), CIFS(D), ENCRYPTED_KEYS(D), LIBCRC32C(S<-NF_CT_PROTO_SCTP(D),NF_TABLES(D),IP_SCTP(D),OPENVSWITCH(D),MD_RAID456(D),BNX2X(D),BNXT(D),BTRFS_FS(D)) "Cryptographic API"
+CRYPTO_ALGAPI=y S <- CRYPTO_AEAD(S<-CRYPTO_USER_API_AEAD(D),CRYPTO_DEV_VIRTIO(D)), CRYPTO_SKCIPHER(S<-BT(D),FS_ENCRYPTION(D),RPCSEC_GSS_KRB5(D),CRYPTO_CTS(D),CRYPTO_XTS(D),CRYPTO_USER_API_SKCIPHER(D),CRYPTO_USER_API_AEAD(D),CRYPTO_DEV_VIRTIO(D)), CRYPTO_HASH(S<-USB_RTL8152(D),FS_ENCRYPTION(D),RPCSEC_GSS_KRB5(D),CRYPTO_MD4(D),CRYPTO_MICHAEL_MIC(D),CRYPTO_WP512(D),CRYPTO_XCBC(D),CRYPTO_USER_API_HASH(D)), CRYPTO_RNG(S<-ENCRYPTED_KEYS(D),CRYPTO_USER_API_RNG(D)), CRYPTO_AES(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D),ENCRYPTED_KEYS(D)), CRYPTO_BLOWFISH(D), CRYPTO_CAMELLIA(D), CRYPTO_CAST5(D), CRYPTO_CAST6(D), CRYPTO_DES(D), CRYPTO_SERPENT(D), CRYPTO_TWOFISH(D)
+CRYPTO_ALGAPI2=y S <- CRYPTO_ALGAPI(S<-CRYPTO_BLOWFISH(D),CRYPTO_CAMELLIA(D),CRYPTO_CAST5(D),CRYPTO_CAST6(D),CRYPTO_DES(D),CRYPTO_SERPENT(D),CRYPTO_TWOFISH(D)), CRYPTO_AEAD2(S<-CIFS(D)), CRYPTO_AKCIPHER2(S<-CRYPTO_DEV_VIRTIO(D))
+CRYPTO_AEAD=y S <- CRYPTO_CCM(S<-MAC80211(D),CIFS(D)), CRYPTO_GCM(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D)), CRYPTO_USER_API_AEAD(D), CRYPTO_DEV_VIRTIO(D)
+CRYPTO_AEAD2=y S <- CIFS(D), CRYPTO_AEAD(S<-CRYPTO_USER_API_AEAD(D),CRYPTO_DEV_VIRTIO(D))
+CRYPTO_SKCIPHER=y S <- XFRM_ALGO(S<-XFRM_USER(D),NET_KEY(D)), BT(D), FS_ENCRYPTION(D), RPCSEC_GSS_KRB5(D), CRYPTO_CBC(S<-DM_CRYPT(D),ENCRYPTED_KEYS(D)), CRYPTO_CTS(D), CRYPTO_ECB(S<-BT(D),CIFS(D),CRYPTO_XTS(D)), CRYPTO_XTS(D), CRYPTO_USER_API_SKCIPHER(D), CRYPTO_USER_API_AEAD(D), CRYPTO_DEV_VIRTIO(D)
+CRYPTO_SKCIPHER2=y S <- CRYPTO_SKCIPHER(S<-BT(D),FS_ENCRYPTION(D),RPCSEC_GSS_KRB5(D),CRYPTO_CTS(D),CRYPTO_XTS(D),CRYPTO_USER_API_SKCIPHER(D),CRYPTO_USER_API_AEAD(D),CRYPTO_DEV_VIRTIO(D))
+CRYPTO_HASH=y S <- XFRM_ALGO(S<-XFRM_USER(D),NET_KEY(D)), USB_RTL8152(D), FS_ENCRYPTION(D), RPCSEC_GSS_KRB5(D), CRYPTO_CCM(S<-MAC80211(D),CIFS(D)), CRYPTO_BLAKE2B(S<-BTRFS_FS(D)), CRYPTO_CMAC(S<-BT(D),MAC80211(D),CIFS(D)), CRYPTO_HMAC(S<-IP_SCTP(D),CIFS(D),ENCRYPTED_KEYS(D)), CRYPTO_MD4(D), CRYPTO_MD5(S<-CIFS(D)), CRYPTO_MICHAEL_MIC(D), CRYPTO_SHA1(S<-IP_SCTP(D)), CRYPTO_SHA256(S<-BT(D),CFG80211(D),USB_RTL8152(D),BTRFS_FS(D),CIFS(D),ENCRYPTED_KEYS(D)), CRYPTO_SHA512(S<-CIFS(D)), CRYPTO_WP512(D), CRYPTO_XCBC(D), CRYPTO_XXHASH(S<-BTRFS_FS(D)), CRYPTO_CRC32C(S<-EXT4_FS(D),BTRFS_FS(D)), CRYPTO_USER_API_HASH(D)
+CRYPTO_HASH2=y S <- CRYPTO_HASH(S<-USB_RTL8152(D),FS_ENCRYPTION(D),RPCSEC_GSS_KRB5(D),CRYPTO_MD4(D),CRYPTO_MICHAEL_MIC(D),CRYPTO_WP512(D),CRYPTO_XCBC(D),CRYPTO_USER_API_HASH(D))
+CRYPTO_RNG=y S <- ENCRYPTED_KEYS(D), CRYPTO_USER_API_RNG(D)
+CRYPTO_RNG2=y S <- CRYPTO_RNG(S<-ENCRYPTED_KEYS(D),CRYPTO_USER_API_RNG(D))
+CRYPTO_AKCIPHER2=y S <- CRYPTO_DEV_VIRTIO(D)
+CRYPTO_AKCIPHER=y S <- CRYPTO_RSA(S<-CRYPTO_DEV_VIRTIO(D))
+CRYPTO_KPP=y S <- CRYPTO_ECDH(S<-BT(D))
+CRYPTO_MANAGER=y S <- CRYPTO_TEST(D), CRYPTO_RSA(S<-CRYPTO_DEV_VIRTIO(D)), CRYPTO_CBC(S<-DM_CRYPT(D),ENCRYPTED_KEYS(D)), CRYPTO_CTS(D), CRYPTO_ECB(S<-BT(D),CIFS(D),CRYPTO_XTS(D)), CRYPTO_XTS(D), CRYPTO_CCM(S<-MAC80211(D),CIFS(D)), CRYPTO_GCM(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D)), CRYPTO_CMAC(S<-BT(D),MAC80211(D),CIFS(D)), CRYPTO_HMAC(S<-IP_SCTP(D),CIFS(D),ENCRYPTED_KEYS(D)), CRYPTO_XCBC(D) "Cryptographic algorithm manager"
+CRYPTO_MANAGER2=y S <- CRYPTO_MANAGER(S<-CRYPTO_TEST(D),CRYPTO_CTS(D),CRYPTO_XTS(D),CRYPTO_XCBC(D))
+CRYPTO_MANAGER_DISABLE_TESTS=y D "Disable run-time self tests"
+CRYPTO_NULL=y S <- CRYPTO_GCM(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D)), CRYPTO_USER_API_AEAD(D) "Null algorithms"
+CRYPTO_NULL2=y S <- CRYPTO_NULL(S<-CRYPTO_USER_API_AEAD(D))
+CRYPTO_AUTHENC=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), CRYPTO_ESSIV(S<-DM_CRYPT(D)) "Authenc support"
+CRYPTO_TEST=m D "Testing module"
+CRYPTO_ENGINE=y S <- CRYPTO_DEV_VIRTIO(D)
+CRYPTO_RSA=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)), CRYPTO_DEV_VIRTIO(D) "RSA (Rivest-Shamir-Adleman)"
+CRYPTO_ECC=y S <- CRYPTO_ECDH(S<-BT(D))
+CRYPTO_ECDH=y S <- BT(D) "ECDH (Elliptic Curve Diffie-Hellman)"
+CRYPTO_AES=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), TIPC_CRYPTO(D), MAC80211(D), CIFS(D), ENCRYPTED_KEYS(D) "AES (Advanced Encryption Standard)"
+CRYPTO_BLOWFISH=m D "Blowfish"
+CRYPTO_BLOWFISH_COMMON=m S <- CRYPTO_BLOWFISH(D)
+CRYPTO_CAMELLIA=m D "Camellia"
+CRYPTO_CAST_COMMON=m S <- CRYPTO_CAST5(D), CRYPTO_CAST6(D)
+CRYPTO_CAST5=m D "CAST5 (CAST-128)"
+CRYPTO_CAST6=m D "CAST6 (CAST-256)"
+CRYPTO_DES=y D "DES and Triple DES EDE"
+CRYPTO_SERPENT=m D "Serpent"
+CRYPTO_TWOFISH=m D "Twofish"
+CRYPTO_TWOFISH_COMMON=m S <- CRYPTO_TWOFISH(D)
+CRYPTO_CBC=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), DM_CRYPT(D), ENCRYPTED_KEYS(D) "CBC (Cipher Block Chaining)"
+CRYPTO_CTR=y S <- CRYPTO_CCM(S<-MAC80211(D),CIFS(D)), CRYPTO_GCM(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D)) "CTR (Counter)"
+CRYPTO_CTS=y D "CTS (Cipher Text Stealing)"
+CRYPTO_ECB=y S <- BT(D), CIFS(D), CRYPTO_XTS(D) "ECB (Electronic Codebook)"
+CRYPTO_XTS=y D "XTS (XOR Encrypt XOR with ciphertext ste"
+CRYPTO_CCM=y S <- MAC80211(D), CIFS(D) "CCM (Counter with Cipher Block Chaining-"
+CRYPTO_GCM=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), TIPC_CRYPTO(D), MAC80211(D), CIFS(D) "GCM (Galois/Counter Mode) and GMAC (GCM "
+CRYPTO_SEQIV=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)) "Sequence Number IV Generator"
+CRYPTO_ECHAINIV=y S <- XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)) "Encrypted Chain IV Generator"
+CRYPTO_ESSIV=y S <- DM_CRYPT(D) "Encrypted Salt-Sector IV Generator"
+CRYPTO_BLAKE2B=y S <- BTRFS_FS(D) "BLAKE2b"
+CRYPTO_CMAC=y S <- BT(D), MAC80211(D), CIFS(D) "CMAC (Cipher-based MAC)"
+CRYPTO_GHASH=y S <- CRYPTO_GCM(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D)) "GHASH"
+CRYPTO_HMAC=y S <- XFRM_AH(S<-INET_AH(D),INET6_AH(D)), XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), IP_SCTP(D), SCTP_COOKIE_HMAC_MD5(S<-SCTP_DEFAULT_COOKIE_HMAC_MD5(C)), CIFS(D), ENCRYPTED_KEYS(D) "HMAC (Keyed-Hash MAC)"
+CRYPTO_MD4=y D "MD4"
+CRYPTO_MD5=y S <- SCTP_COOKIE_HMAC_MD5(S<-SCTP_DEFAULT_COOKIE_HMAC_MD5(C)), CIFS(D) "MD5"
+CRYPTO_MICHAEL_MIC=m D "Michael MIC"
+CRYPTO_SHA1=y S <- IP_SCTP(D) "SHA-1"
+CRYPTO_SHA256=y S <- XFRM_AH(S<-INET_AH(D),INET6_AH(D)), XFRM_ESP(S<-INET_ESP(D),INET6_ESP(D)), BT(D), CFG80211(D), USB_RTL8152(D), BTRFS_FS(D), CIFS(D), ENCRYPTED_KEYS(D) "SHA-224 and SHA-256"
+CRYPTO_SHA512=y S <- CIFS(D) "SHA-384 and SHA-512"
+CRYPTO_WP512=m D "Whirlpool"
+CRYPTO_XCBC=m D "XCBC-MAC (Extended Cipher Block Chaining"
+CRYPTO_XXHASH=y S <- BTRFS_FS(D) "xxHash"
+CRYPTO_CRC32C=y S <- EXT4_FS(D), JBD2(S<-EXT4_FS(D)), BTRFS_FS(D), LIBCRC32C(S<-NF_CT_PROTO_SCTP(D),NF_TABLES(D),IP_SCTP(D),OPENVSWITCH(D),MD_RAID456(D),BNX2X(D),BNXT(D),BTRFS_FS(D)) "CRC32c"
+CRYPTO_DEFLATE=y S <- XFRM_IPCOMP(S<-INET_IPCOMP(D),INET6_IPCOMP(D)) "Deflate"
+CRYPTO_USER_API=m S <- CRYPTO_USER_API_HASH(D), CRYPTO_USER_API_SKCIPHER(D), CRYPTO_USER_API_RNG(D), CRYPTO_USER_API_AEAD(D)
+CRYPTO_USER_API_HASH=m D "Hash algorithms"
+CRYPTO_USER_API_SKCIPHER=m D "Symmetric key cipher algorithms"
+CRYPTO_USER_API_RNG=m D "RNG (random number generator) algorithms"
+CRYPTO_USER_API_AEAD=m D "AEAD cipher algorithms"
+CRYPTO_HW=y D "Hardware crypto devices"
+CRYPTO_DEV_VIRTIO=y D "VirtIO crypto driver"
+ASYMMETRIC_KEY_TYPE=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)) "Asymmetric (public-key cryptographic) ke"
+ASYMMETRIC_PUBLIC_KEY_SUBTYPE=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)) "Asymmetric public-key crypto algorithm s"
+X509_CERTIFICATE_PARSER=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)) "X.509 certificate parser"
+PKCS7_MESSAGE_PARSER=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)) "PKCS#7 message parser"
+SYSTEM_TRUSTED_KEYRING=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)) "Provide system-wide ring of trusted keys"
+BINARY_PRINTF=y S <- BPF_SYSCALL(D), TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D))
+RAID6_PQ=y S <- MD_RAID456(D), BTRFS_FS(D)
+RAID6_PQ_BENCHMARK=y D "Automatically choose fastest RAID6 PQ fu"
+BITREVERSE=y S <- USB_NET_SMSC75XX(D), USB_NET_SMSC95XX(D), CRC32(S<-ACPI(D),EFI_PARTITION(D),BT_BNEP(D),CFG80211(D),MAC80211(D),TUN(D),TYPHOON(D),PCNET32(D),ATL2(D),ATL1(D),ATL1E(D),ATL1C(D),ALX(D),DL2K(D),E1000E(D),JME(D),SKGE(D),SKY2(D),8139CP(D),8139TOO(D),R8169(D),USB_RTL8152(D),USB_NET_AX8817X(D),USB_NET_AX88179_178A(D),USB_NET_DM9601(D),USB_NET_SMSC75XX(D),USB_NET_SMSC95XX(D),USB_NET_ZAURUS(D),DRM_I915(D),FRAMEBUFFER_CONSOLE(D),NFS_FS(D)), ZLIB_DEFLATE(S<-PPP_DEFLATE(D),DRM_I915_COMPRESS_ERROR(D),BTRFS_FS(D))
+CORDIC=m S <- BRCMSMAC(D) "CORDIC algorithm"
+RATIONAL=y S <- SERIAL_8250_LPSS(D), SERIAL_8250_MID(D), VIDEO_DEV(H), COMMON_CLK(S<-X86_AMD_PLATFORM_DEVICE(D))
+CRYPTO_LIB_UTILS=y S <- CRYPTO(S<-IP_SCTP(D),TIPC_CRYPTO(D),BT(D),MAC80211(D),DM_CRYPT(D),USB_RTL8152(D),EXT4_FS(D),BTRFS_FS(D),FS_ENCRYPTION(D),CIFS(D),ENCRYPTED_KEYS(D))
+CRYPTO_LIB_AES=y S <- BT(D), CRYPTO_AES(S<-TIPC_CRYPTO(D),MAC80211(D),CIFS(D),ENCRYPTED_KEYS(D))
+CRYPTO_LIB_ARC4=m S <- MAC80211(D)
+CRYPTO_LIB_DES=y S <- CRYPTO_DES(D)
+CRYPTO_LIB_SHA1=y S <- BPF(S<-BPF_SYSCALL(D),NET(D)), IPV6(D), CRYPTO_SHA1(S<-IP_SCTP(D))
+CRYPTO_LIB_SHA256=y S <- FS_ENCRYPTION(D), CRYPTO_SHA256(S<-BT(D),CFG80211(D),USB_RTL8152(D),BTRFS_FS(D),CIFS(D),ENCRYPTED_KEYS(D))
+CRC_CCITT=m S <- PPP_ASYNC(D), RT2800PCI(D) "CRC-CCITT functions"
+CRC16=y S <- BT(D), SMSC_PHY(S<-USB_NET_SMSC95XX(D)), USB_NET_SMSC75XX(D), USB_NET_SMSC95XX(D), EXT4_FS(D) "CRC16 functions"
+CRC32=y S <- ACPI(D), EFI_PARTITION(D), BT_BNEP(D), CFG80211(D), MAC80211(D), TUN(D), TYPHOON(D), PCNET32(D), ATL2(D), ATL1(D), ATL1E(D), ATL1C(D), ALX(D), DL2K(D), E1000E(D), JME(D), SKGE(D), SKY2(D), 8139CP(D), 8139TOO(D), R8169(D), USB_RTL8152(D), USB_NET_AX8817X(D), USB_NET_AX88179_178A(D), USB_NET_DM9601(D), USB_NET_SMSC75XX(D), USB_NET_SMSC95XX(D), USB_NET_ZAURUS(D), DRM_I915(D), FRAMEBUFFER_CONSOLE(D), JBD2(S<-EXT4_FS(D)), NFS_FS(D), LOCKD(S<-NFS_FS(D)), CRYPTO_CRC32C(S<-EXT4_FS(D),BTRFS_FS(D)) "CRC32/CRC32c functions"
+CRC32_SLICEBY8=y C "Slice by 8 bytes"
+LIBCRC32C=y S <- NF_CT_PROTO_SCTP(D), NF_TABLES(D), IP_SCTP(D), OPENVSWITCH(D), MD_RAID456(D), DM_PERSISTENT_DATA(S<-DM_THIN_PROVISIONING(D)), BNX2X(D), BNXT(D), BTRFS_FS(D) "CRC32c (Castagnoli, et al) Cyclic Redund"
+CRC8=m D "CRC8 function"
+XXHASH=y S <- CRYPTO_XXHASH(S<-BTRFS_FS(D))
+ZLIB_INFLATE=y S <- BNX2X(D), PPP_DEFLATE(D), BTRFS_FS(D), ZISOFS(D), DECOMPRESS_GZIP(S<-RD_GZIP(D))
+ZLIB_DEFLATE=y S <- PPP_DEFLATE(D), DRM_I915_COMPRESS_ERROR(D), BTRFS_FS(D)
+LZO_COMPRESS=y S <- BTRFS_FS(D)
+LZO_DECOMPRESS=y S <- BTRFS_FS(D), DECOMPRESS_LZO(S<-RD_LZO(D))
+LZ4_DECOMPRESS=y S <- DECOMPRESS_LZ4(S<-RD_LZ4(D))
+ZSTD_COMMON=y S <- ZSTD_COMPRESS(S<-BTRFS_FS(D)), ZSTD_DECOMPRESS(S<-BTRFS_FS(D))
+ZSTD_COMPRESS=y S <- BTRFS_FS(D)
+ZSTD_DECOMPRESS=y S <- BTRFS_FS(D), DECOMPRESS_ZSTD(S<-RD_ZSTD(D))
+XZ_DEC=y S <- DECOMPRESS_XZ(S<-RD_XZ(D)) "XZ decompression support"
+XZ_DEC_X86=y H needs=EXPERT "x86 BCJ filter decoder"
+XZ_DEC_POWERPC=y H needs=EXPERT "PowerPC BCJ filter decoder"
+XZ_DEC_IA64=y H needs=EXPERT "IA-64 BCJ filter decoder"
+XZ_DEC_ARM=y H needs=EXPERT "ARM BCJ filter decoder"
+XZ_DEC_ARMTHUMB=y H needs=EXPERT "ARM-Thumb BCJ filter decoder"
+XZ_DEC_SPARC=y H needs=EXPERT "SPARC BCJ filter decoder"
+XZ_DEC_BCJ=y S <- XZ_DEC_X86(H), XZ_DEC_POWERPC(H), XZ_DEC_IA64(H), XZ_DEC_ARM(H), XZ_DEC_ARMTHUMB(H), XZ_DEC_SPARC(H)
+DECOMPRESS_GZIP=y S <- RD_GZIP(D)
+DECOMPRESS_BZIP2=y S <- RD_BZIP2(D)
+DECOMPRESS_LZMA=y S <- RD_LZMA(D)
+DECOMPRESS_XZ=y S <- RD_XZ(D)
+DECOMPRESS_LZO=y S <- RD_LZO(D)
+DECOMPRESS_LZ4=y S <- RD_LZ4(D)
+DECOMPRESS_ZSTD=y S <- RD_ZSTD(D)
+INTERVAL_TREE=y S <- MMU_NOTIFIER(S<-DRM_I915_USERPTR(D)), DRM_I915(D)
+XARRAY_MULTI=y S <- SND_CTL_FAST_LOOKUP(H)
+ASSOCIATIVE_ARRAY=y S <- KEYS(S<-FS_ENCRYPTION(D),NFS_V4(D),CIFS(D))
+CHECK_SIGNATURE=y S <- I2C_I801(D)
+GLOB=y S <- ATA(D), FUNCTION_TRACER(D)
+NLATTR=y S <- NET(D)
+CLZ_TAB=y S <- MPILIB(S<-CRYPTO_DEV_VIRTIO(D))
+MPILIB=y S <- CRYPTO_RSA(S<-CRYPTO_DEV_VIRTIO(D)), CRYPTO_DEV_VIRTIO(D)
+DIMLIB=y S <- BNXT(D)
+OID_REGISTRY=y S <- SYSTEM_DATA_VERIFICATION(S<-CFG80211_REQUIRE_SIGNED_REGDB(H)), SUNRPC_GSS(S<-RPCSEC_GSS_KRB5(D)), CIFS(D)
+UCS2_STRING=y S <- EFI(D)
+FONT_SUPPORT=y S <- FRAMEBUFFER_CONSOLE(D)
+FONT_8x8=y H needs=FONTS,STI_CONSOLE "VGA 8x8 font"
+FONT_8x16=y H needs=FONTS "VGA 8x16 font"
+SG_POOL=y S <- VIRTIO_BLK(D), SCSI(S<-ATA(D))
+STACKDEPOT=y S <- SLUB_DEBUG(H)
+SBITMAP=y S <- BLOCK(H)
+PRINTK_TIME=y D "Show timing information on printks"
+SYMBOLIC_ERRNAME=y D "Support symbolic error names in printf"
+DEBUG_BUGVERBOSE=y H needs=DEBUG_KERNEL,EXPERT,HAVE_DEBUG_BUGVERBOSE "Verbose BUG() reporting (adds 70K)"
+SECTION_MISMATCH_WARN_ONLY=y D "Make section mismatch errors non-fatal"
+FRAME_POINTER=y S <- UNWINDER_FRAME_POINTER(C) "Compile the kernel with frame pointers"
+MAGIC_SYSRQ=y D "Magic SysRq key"
+MAGIC_SYSRQ_SERIAL=y D "Enable magic SysRq key over serial"
+DEBUG_FS=y S <- BLK_DEV_IO_TRACE(D) "Debug Filesystem"
+DEBUG_FS_ALLOW_ALL=y C "Access normal"
+SLUB_DEBUG=y H needs=EXPERT,SLUB_TINY "Enable SLUB debugging support"
+DEBUG_MEMORY_INIT=y H needs=EXPERT "Debug memory initialisation"
+KFENCE=y D "KFENCE: low-overhead sampling-based memo"
+STACKTRACE=y S <- STACKDEPOT(S<-SLUB_DEBUG(H)), KFENCE(D), TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D)), BLK_DEV_IO_TRACE(D) "Stack backtrace support"
+NOP_TRACER=y S <- TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D))
+TRACE_CLOCK=y S <- TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D))
+RING_BUFFER=y S <- TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D))
+EVENT_TRACING=y S <- TRACING(S<-KPROBE_EVENTS(D),UPROBE_EVENTS(D))
+CONTEXT_SWITCH_TRACER=y S <- FUNCTION_TRACER(D)
+TRACING=y S <- GENERIC_TRACER(S<-FUNCTION_TRACER(D),FTRACE_SYSCALLS(D),BLK_DEV_IO_TRACE(D)), KPROBE_EVENTS(D), UPROBE_EVENTS(D)
+FTRACE=y D "Tracers"
+FUNCTION_TRACER=y D "Kernel Function Tracer"
+FUNCTION_GRAPH_TRACER=y D "Kernel Function Graph Tracer"
+DYNAMIC_FTRACE=y D "enable/disable function tracing dynamica"
+FTRACE_SYSCALLS=y D "Trace syscalls"
+BRANCH_PROFILE_NONE=y C "No branch profiling"
+BLK_DEV_IO_TRACE=y D "Support for tracing block IO actions"
+KPROBE_EVENTS=y D "Enable kprobes-based dynamic events"
+UPROBE_EVENTS=y D "Enable uprobes-based dynamic events"
+DYNAMIC_EVENTS=y S <- KPROBE_EVENTS(D), UPROBE_EVENTS(D)
+PROBE_EVENTS=y S <- KPROBE_EVENTS(D), UPROBE_EVENTS(D)
+STRICT_DEVMEM=y D "Filter access to /dev/mem"
+X86_VERBOSE_BOOTUP=y D "Enable verbose x86 bootup info messages"
+EARLY_PRINTK=y H needs=EXPERT "Early printk"
+IO_DELAY_0X80=y C "port 0x80 based port-IO delay [recommend"
+UNWINDER_FRAME_POINTER=y C "Frame pointer unwinder"
+RUNTIME_TESTING_MENU=y D "Runtime Testing"
+
+[cfg로 끌 방법이 없는 항목 (DERIVED, 또는 고정 옵션만 select함)]
+THREAD_INFO_IN_TASK, SYSVIPC_SYSCTL, SYSVIPC_COMPAT, POSIX_MQUEUE_SYSCTL, HARDIRQS_SW_RESEND, IRQ_MSI_IOMMU, IRQ_FORCED_THREADING, SPARSE_IRQ, CLOCKSOURCE_WATCHDOG, CLOCKSOURCE_VALIDATE_LAST_CYCLE, POSIX_CPU_TIMERS_TASK_WORK, CONTEXT_TRACKING, CONTEXT_TRACKING_IDLE, BPF_JIT_DEFAULT_ON, PREEMPT_COUNT, TREE_RCU, PREEMPT_RCU, TREE_SRCU, TASKS_RCU_GENERIC, RCU_STALL_COMMON, RCU_NEED_SEGCBLIST, MEMCG_KMEM, CGROUP_WRITEBACK, SCHED_MM_CID, SYSCTL_EXCEPTION_TRACE, FUTEX_PI, KALLSYMS_ABSOLUTE_PERCPU, KALLSYMS_BASE_RELATIVE, PERF_EVENTS, X86_64, X86, INSTRUCTION_DECODER, LOCKDEP_SUPPORT, STACKTRACE_SUPPORT, MMU, AUDIT_ARCH, X86_64_SMP, FIX_EARLYCON_MEM, X86_SUPPORTS_MEMORY_FAILURE, X86_INTEL_USERCOPY, X86_USE_PPRO_CHECKSUM, X86_P6_NOP, X86_TSC, X86_CMPXCHG64, X86_CMOV, X86_DEBUGCTLMSR, IA32_FEAT_CTL, X86_VMX_FEATURE_NAMES, HPET_EMULATE_RTC, SCHED_SMT, X86_LOCAL_APIC, X86_IO_APIC, X86_MCE_THRESHOLD, X86_ESPFIX64, MICROCODE, X86_DIRECT_GBPAGES, SCHED_HRTICK, HOTPLUG_CPU, PREFIX_SYMBOLS, PM_SLEEP, PM_SLEEP_SMP, PM, PM_SLEEP_DEBUG, PM_CLK, ACPI_LEGACY_TABLES_LOOKUP, ACPI_SYSTEM_POWER_STATES_SUPPORT, ACPI_LPIT, ACPI_SLEEP, ACPI_CPU_FREQ_PSS, ACPI_PROCESSOR_CSTATE, ACPI_PROCESSOR_IDLE, ACPI_HOTPLUG_CPU, ACPI_CONTAINER, ACPI_HOTPLUG_IOAPIC, CPU_IDLE, CPU_IDLE_GOV_MENU, PCI_DIRECT, MMCONF_FAM10H, AMD_NB, COMPAT_32, COMPAT, COMPAT_FOR_U64_ALIGNMENT, HOTPLUG_SMT, HOTPLUG_CORE_SYNC, HOTPLUG_CORE_SYNC_DEAD, HOTPLUG_CORE_SYNC_FULL, HOTPLUG_SPLIT_STARTUP, HOTPLUG_PARALLEL, OPTPROBES, KPROBES_ON_FTRACE, KRETPROBES, KRETPROBE_ON_RETHOOK, TRACE_IRQFLAGS_SUPPORT, TRACE_IRQFLAGS_NMI_SUPPORT, SECCOMP_FILTER, MODULES_USE_ELF_RELA, SOFTIRQ_ON_OWN_STACK, PAGE_SIZE_LESS_THAN_64KB, PAGE_SIZE_LESS_THAN_256KB, OLD_SIGSUSPEND3, DYNAMIC_SIGFRAME, MODULES_TREE_LOOKUP, BLK_MQ_PCI, BLK_MQ_VIRTIO, BLK_PM, MUTEX_SPIN_ON_OWNER, RWSEM_SPIN_ON_OWNER, LOCK_SPIN_ON_OWNER, QUEUED_SPINLOCKS, QUEUED_RWLOCKS, FREEZER, COMPAT_BINFMT_ELF, SPARSEMEM, SPARSEMEM_EXTREME, EXCLUSIVE_SYSTEM_RAM, PHYS_ADDR_T_64BIT, ZONE_DMA32, PER_VMA_LOCK, LOCK_MM_AND_FIND_VMA, COMPAT_NETLINK_MESSAGES, AF_UNIX_OOB, NET_HANDSHAKE, INET_TCP_DIAG, NETFILTER_SKIP_EGRESS, NETFILTER_BPF_LINK, NFT_REJECT_INET, NFT_REJECT_IPV4, NFT_REJECT_IPV6, NF_REJECT_IPV6, INET_SCTP_DIAG, RPS, RFS_ACCEL, SOCK_RX_QUEUE_MAPPING, XPS, NET_RX_BUSY_POLL, BQL, NET_FLOW_LIMIT, WEXT_PROC, RFKILL_LEDS, NET_SELFTESTS, PCI_DOMAINS, PCIE_PME, PCI_LOCKLESS_CONFIG, PCI_LABEL, EFI_ESRT, EFI_EARLYCON, PNPACPI, SCSI_MOD, NETPOLL, NET_POLL_CONTROLLER, FIXED_PHY, MDIO_BUS, FWNODE_MDIO, ACPI_MDIO, USB_RTL8153_ECM, RT2X00_LIB_LEDS, ISDN_CAPI, CAPI_TRACE, ISDN_CAPI_MIDDLEWARE, VT_CONSOLE_SLEEP, HW_CONSOLE, I2C_BOARDINFO, PTP_1588_CLOCK_OPTIONAL, GPIO_ACPI, X86_THERMAL_VECTOR, SSB_POSSIBLE, BCMA_POSSIBLE, BCMA_HOST_PCI_POSSIBLE, VIDEO_V4L2_I2C, MEDIA_HIDE_ANCILLARY_SUBDRV, DRM_BRIDGE, DRM_PANEL_BRIDGE, FB_SYS_FILLRECT, FB_SYS_COPYAREA, FB_SYS_IMAGEBLIT, FB_SYS_FOPS, DUMMY_CONSOLE, SND_TIMER, SND_JACK_INPUT_DEV, SND_DMA_SGBUF, USB_ARCH_HAS_HCD, USB_XHCI_PCI, USB_EHCI_PCI, LEDS_TRIGGER_AUDIO, EDAC_ATOMIC_SCRUB, EDAC_SUPPORT, RTC_I2C_AND_SPI, CLKEVT_I8253, CLKBLD_I8253, MAILBOX, PCC, IOMMU_IOVA, IOMMU_API, IOMMU_DMA, DCACHE_WORD_ACCESS, FS_MBCACHE, PROC_PID_ARCH_STATUS, ROMFS_ON_BLOCK, NFS_USE_KERNEL_DNS, LOCKD_V4, SMBFS, CRYPTO_SIG, CRYPTO_SIG2, CRYPTO_RNG_DEFAULT, CRYPTO_KPP2, CRYPTO_ACOMP2, CRYPTO_GENIV, CRYPTO_SHA3, CRYPTO_DRBG_MENU, CRYPTO_DRBG_HMAC, CRYPTO_DRBG, CRYPTO_JITTERENTROPY, CRYPTO_HASH_INFO, CRYPTO_LIB_GF128MUL, CRYPTO_LIB_BLAKE2S_GENERIC, DMA_OPS, SWIOTLB, SGL_ALLOC, CPU_RMAP, DQL, HARDLOCKUP_CHECK_TIMESTAMP, LOCK_DEBUGGING_SUPPORT, USER_STACKTRACE_SUPPORT, RETHOOK, TRACING_SUPPORT, DYNAMIC_FTRACE_WITH_REGS, DYNAMIC_FTRACE_WITH_DIRECT_CALLS, DYNAMIC_FTRACE_WITH_ARGS, BPF_EVENTS, FTRACE_MCOUNT_RECORD, FTRACE_MCOUNT_USE_CC
+
+[복구 커널 로그 (중복 제거)]
+[   32.930875] Kernel panic - not syncing: sysrq triggered crash
+[   32.931259] CPU: 3 PID: 216 Comm: sh Kdump: loaded Not tainted 6.6.123-yocto-standard #1
+[   32.931542] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org 04/01/2014
+[   32.931929] Call Trace:
+[   32.932066]  <TASK>
+[   32.932238]  dump_stack_lvl+0x3b/0x50
+[   32.932656]  dump_stack+0x14/0x20
+[   32.932735]  panic+0x18c/0x340
+[   32.932849]  sysrq_handle_crash+0x1e/0x20
+[   32.932951]  __handle_sysrq+0xdd/0x1a0
+[   32.933035]  write_sysrq_trigger+0x2c/0x50
+[   32.933112]  proc_reg_write+0x65/0xa0
+[   32.933206]  vfs_write+0xf5/0x420
+[   32.933313]  ? __count_memcg_events+0x5c/0xc0
+[   32.933449]  ksys_write+0x77/0x100
+[   32.933525]  __x64_sys_write+0x1d/0x30
+[   32.933606]  x64_sys_call+0x82/0x1c90
+[   32.933692]  do_syscall_64+0x41/0x90
+[   32.933777]  entry_SYSCALL_64_after_hwframe+0x78/0xe2
+[   32.933953] RIP: 0033:0x7fb6d95cc644
+[   32.934409] Code: c7 00 16 00 00 00 b8 ff ff ff ff c3 66 2e 0f 1f 84 00 00 00 00 00 f3 0f 1e fa 80 3d 25 4a 0e 00 00 74 13 b8 01 00 00 00 0f 05 <48> 3d 00 f0 ff ff 77 54 c3 0f 1f 00 48 83 ec 28 48 89 54 24 18 48
+[   32.934799] RSP: 002b:00007ffe0657ac38 EFLAGS: 00000202 ORIG_RAX: 0000000000000001
+[   32.935027] RAX: ffffffffffffffda RBX: 0000000000000002 RCX: 00007fb6d95cc644
+[   32.935157] RDX: 0000000000000002 RSI: 000055dfe433ea30 RDI: 0000000000000001
+[   32.935283] RBP: 00007fb6d96aa5c0 R08: 0000000000000410 R09: 0000000000000001
+[   32.935441] R10: 0000000000000004 R11: 0000000000000202 R12: 0000000000000002
+[   32.935573] R13: 000055dfe433ea30 R14: 00007fb6d96a7f00 R15: 0000000000000000
+[   32.935787]  </TASK>
+[    0.000000] Linux version 6.6.123-recovery (oe-user@oe-host) (x86_64-poky-linux-gcc (GCC) 13.4.0, GNU ld (GNU Binutils) 2.42.0.20240723) #1 SMP PREEMPT_DYNAMIC Mon Sep 21 04:40:25 UTC 2026
+[    0.000000] Command line: console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 recovery_kernel=1 printk.devkmsg=on acpi_rsdp=0xf5290 elfcorehdr=2080116K
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x0000000000000fff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000001000-0x000000000009fbff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000000f0000-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000077000000-0x000000007ef5cfff] usable
+[    0.000000] BIOS-e820: [mem 0x000000007efffc00-0x000000007effffff] usable
+[    0.000000] BIOS-e820: [mem 0x000000007ffdc000-0x000000007fffffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000b0000000-0x00000000bfffffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000fed1c000-0x00000000fed1ffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000fffc0000-0x00000000ffffffff] reserved
+[    0.000000] random: crng init done
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] APIC: Static calls initialized
+[    0.000000] extended physical RAM map:
+[    0.000000] reserve setup_data: [mem 0x0000000000000000-0x0000000000000fff] reserved
+[    0.000000] reserve setup_data: [mem 0x0000000000001000-0x000000000009fbff] usable
+[    0.000000] reserve setup_data: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+[    0.000000] reserve setup_data: [mem 0x00000000000f0000-0x00000000000fffff] reserved
+[    0.000000] reserve setup_data: [mem 0x0000000077000000-0x000000007700000f] usable
+[    0.000000] reserve setup_data: [mem 0x0000000077000010-0x000000007ef5cfff] usable
+[    0.000000] reserve setup_data: [mem 0x000000007efffc00-0x000000007effffff] usable
+[    0.000000] reserve setup_data: [mem 0x000000007ffdc000-0x000000007fffffff] reserved
+[    0.000000] reserve setup_data: [mem 0x00000000b0000000-0x00000000bfffffff] reserved
+[    0.000000] reserve setup_data: [mem 0x00000000fed1c000-0x00000000fed1ffff] reserved
+[    0.000000] reserve setup_data: [mem 0x00000000fffc0000-0x00000000ffffffff] reserved
+[    0.000000] SMBIOS 3.0.0 present.
+[    0.000000] DMI: QEMU Standard PC (Q35 + ICH9, 2009), BIOS rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org 04/01/2014
+[    0.000000] tsc: Fast TSC calibration failed
+[    0.000000] last_pfn = 0x7f000 max_arch_pfn = 0x400000000
+[    0.000000] MTRR map: 4 entries (3 fixed + 1 variable; max 19), built from 8 variable MTRRs
+[    0.000000] x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+[    0.000000] found SMP MP-table at [mem 0x000f5470-0x000f547f]
+[    0.000000] RAMDISK: [mem 0x7c6ef000-0x7cbfffff]
+[    0.000000] ACPI: Early table checksum verification disabled
+[    0.000000] ACPI: RSDP 0x00000000000F5290 000014 (v00 BOCHS )
+[    0.000000] ACPI: RSDT 0x000000007FFE240E 000038 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: FACP 0x000000007FFE21EE 0000F4 (v03 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: DSDT 0x000000007FFE0040 0021AE (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: FACS 0x000000007FFE0000 000040
+[    0.000000] ACPI: APIC 0x000000007FFE22E2 000090 (v03 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: HPET 0x000000007FFE2372 000038 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: MCFG 0x000000007FFE23AA 00003C (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: WAET 0x000000007FFE23E6 000028 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: Reserving FACP table memory at [mem 0x7ffe21ee-0x7ffe22e1]
+[    0.000000] ACPI: Reserving DSDT table memory at [mem 0x7ffe0040-0x7ffe21ed]
+[    0.000000] ACPI: Reserving FACS table memory at [mem 0x7ffe0000-0x7ffe003f]
+[    0.000000] ACPI: Reserving APIC table memory at [mem 0x7ffe22e2-0x7ffe2371]
+[    0.000000] ACPI: Reserving HPET table memory at [mem 0x7ffe2372-0x7ffe23a9]
+[    0.000000] ACPI: Reserving MCFG table memory at [mem 0x7ffe23aa-0x7ffe23e5]
+[    0.000000] ACPI: Reserving WAET table memory at [mem 0x7ffe23e6-0x7ffe240d]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000000001000-0x0000000000ffffff]
+[    0.000000]   DMA32    [mem 0x0000000001000000-0x000000007effffff]
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000001000-0x000000000009efff]
+[    0.000000]   node   0: [mem 0x0000000077000000-0x000000007ef5cfff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000000001000-0x000000007ef5cfff]
+[    0.000000] On node 0, zone DMA: 1 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA32: 61281 pages in unavailable ranges
+[    0.000000] On node 0, zone DMA32: 4259 pages in unavailable ranges
+[    0.000000] ACPI: PM-Timer IO Port: 0x608
+[    0.000000] ACPI: LAPIC_NMI (acpi_id[0xff] dfl dfl lint[0x1])
+[    0.000000] IOAPIC[0]: apic_id 0, version 32, address 0xfec00000, GSI 0-23
+[    0.000000] ACPI: INT_SRC_OVR (bus 0 bus_irq 0 global_irq 2 dfl dfl)
+[    0.000000] ACPI: INT_SRC_OVR (bus 0 bus_irq 5 global_irq 5 high level)
+[    0.000000] ACPI: INT_SRC_OVR (bus 0 bus_irq 9 global_irq 9 high level)
+[    0.000000] ACPI: INT_SRC_OVR (bus 0 bus_irq 10 global_irq 10 high level)
+[    0.000000] ACPI: INT_SRC_OVR (bus 0 bus_irq 11 global_irq 11 high level)
+[    0.000000] ACPI: Using ACPI (MADT) for SMP configuration information
+[    0.000000] ACPI: HPET id: 0x8086a201 base: 0xfed00000
+[    0.000000] smpboot: Allowing 4 CPUs, 0 hotplug CPUs
+[    0.000000] [mem 0x00100000-0x76ffffff] available for PCI devices
+[    0.000000] Booting paravirtualized kernel on bare hardware
+[    0.000000] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1910969940391419 ns
+[    0.000000] setup_percpu: NR_CPUS:64 nr_cpumask_bits:4 nr_cpu_ids:4 nr_node_ids:1
+[    0.000000] percpu: Embedded 56 pages/cpu s189736 r8192 d31448 u524288
+[    0.000000] Kernel command line: console=ttyS0 rdinit=/usr/bin/recovery-cluster panic=0 recovery_kernel=1 printk.devkmsg=on acpi_rsdp=0xf5290 elfcorehdr=2080116K
+[    0.000000] Unknown kernel command line parameters "recovery_kernel=1 acpi_rsdp=0xf5290 elfcorehdr=2080116K", will be passed to user space.
+[    0.000000] Dentry cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 32250
+[    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[    0.000000] Memory: 82484K/131052K available (18432K kernel code, 2319K rwdata, 5352K rodata, 3456K init, 2240K bss, 48308K reserved, 0K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1
+[    0.000000] Kernel/User page tables isolation: enabled
+[    0.000000] ftrace: allocating 52299 entries in 205 pages
+[    0.000000] ftrace: allocated 205 pages with 5 groups
+[    0.000000] Dynamic Preempt: full
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=64 to nr_cpu_ids=4.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Rude variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 100 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=4
+[    0.000000] NR_IRQS: 4352, nr_irqs: 456, preallocated irqs: 16
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] kfence: initialized - using 2097152 bytes for 255 objects at 0x(____ptrval____)-0x(____ptrval____)
+[    0.000000] Spurious LAPIC timer interrupt on cpu 0
+[    0.000000] Console: colour dummy device 80x25
+[    0.000000] printk: console [ttyS0] enabled
+[    0.000000] ACPI: Core revision 20230628
+[    0.000000] clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604467 ns
+[    0.003000] APIC: Switch to symmetric I/O mode setup
+[    0.007000] ..TIMER: vector=0x30 apic1=0 pin1=2 apic2=-1 pin2=-1
+[    0.015000] tsc: Unable to calibrate against PIT
+[    0.015000] tsc: using HPET reference calibration
+[    0.015000] tsc: Detected 3597.604 MHz processor
+[    0.000387] clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x33db7bb2dde, max_idle_ns: 440795320768 ns
+[    0.000903] Calibrating delay loop (skipped), value calculated using timer frequency.. 7195.20 BogoMIPS (lpj=3597604)
+[    0.005385] Last level iTLB entries: 4KB 0, 2MB 0, 4MB 0
+[    0.005543] Last level dTLB entries: 4KB 0, 2MB 0, 4MB 0, 1GB 0
+[    0.005906] Spectre V1 : Mitigation: usercopy/swapgs barriers and __user pointer sanitization
+[    0.006163] Spectre V2 : Mitigation: Retpolines
+[    0.006246] Spectre V2 : Spectre v2 / SpectreRSB: Filling RSB on context switch and VMEXIT
+[    0.006421] Speculative Store Bypass: Vulnerable
+[    0.006743] MDS: Vulnerable: Clear CPU buffers attempted, no microcode
+[    0.006858] MMIO Stale Data: Unknown: No mitigations
+[    0.007000] SRBDS: Unknown: Dependent on hypervisor status
+[    0.007168] active return thunk: its_return_thunk
+[    0.007498] ITS: Mitigation: Aligned branch/return thunks
+[    0.008675] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+[    0.012614] x86/fpu: Supporting XSAVE feature 0x002: 'SSE registers'
+[    0.012762] x86/fpu: Supporting XSAVE feature 0x004: 'AVX registers'
+[    0.012957] x86/fpu: xstate_offset[2]:  576, xstate_sizes[2]:  256
+[    0.013150] x86/fpu: Enabled xstate features 0x7, context size is 832 bytes, using 'standard' format.
+[    0.138802] Freeing SMP alternatives memory: 52K
+[    0.139916] pid_max: default: 32768 minimum: 301
+[    0.144578] LSM: initializing lsm=capability,landlock,integrity
+[    0.145731] landlock: Up and running.
+[    0.149381] Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[    0.149558] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[    0.285675] smpboot: CPU0: Intel Xeon E3-12xx v2 (Ivy Bridge) (family: 0x6, model: 0x3a, stepping: 0x9)
+[    0.295387] RCU Tasks: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+[    0.295802] RCU Tasks Rude: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+[    0.296496] RCU Tasks Trace: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+[    0.297007] Performance Events: unsupported p6 CPU model 58 no PMU driver, software events only.
+[    0.298416] signal: max sigframe size: 1776
+[    0.299747] rcu: Hierarchical SRCU implementation.
+[    0.299858] rcu: 	Max phase no-delay instances is 400.
+[    0.315319] smp: Bringing up secondary CPUs ...
+[    0.321144] smpboot: x86: Booting SMP configuration:
+[    0.321300] .... node  #0, CPUs:      #1 #2 #3
+[    0.338878] smp: Brought up 1 node, 4 CPUs
+[    0.339921] smpboot: Max logical packages: 1
+[    0.340170] smpboot: Total of 4 processors activated (28780.83 BogoMIPS)
+[    0.361899] devtmpfs: initialized
+[    0.372536] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1911260446275000 ns
+[    0.373557] futex hash table entries: 1024 (order: 4, 65536 bytes, linear)
+[    0.375623] pinctrl core: initialized pinctrl subsystem
+[    0.392633] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.398358] thermal_sys: Registered thermal governor 'step_wise'
+[    0.398398] thermal_sys: Registered thermal governor 'user_space'
+[    0.399176] cpuidle: using governor menu
+[    0.402966] PCI: MMCONFIG for domain 0000 [bus 00-ff] at [mem 0xb0000000-0xbfffffff] (base 0xb0000000)
+[    0.403805] PCI: MMCONFIG at [mem 0xb0000000-0xbfffffff] reserved as E820 entry
+[    0.405274] PCI: Using configuration type 1 for base access
+[    0.407543] mtrr: your CPUs had inconsistent fixed MTRR settings
+[    0.407692] mtrr: your CPUs had inconsistent variable MTRR settings
+[    0.407789] mtrr: your CPUs had inconsistent MTRRdefType settings
+[    0.407867] mtrr: probably your BIOS does not setup all CPUs.
+[    0.407940] mtrr: corrected configuration.
+[    0.409785] kprobes: kprobe jump-optimization is enabled. All kprobes are optimized if possible.
+[    0.440771] raid6: sse2x4   gen()  1746 MB/s
+[    0.457693] raid6: sse2x2   gen()  1838 MB/s
+[    0.474722] raid6: sse2x1   gen()  1785 MB/s
+[    0.474846] raid6: using algorithm sse2x2 gen() 1838 MB/s
+[    0.491736] raid6: .... xor() 1093 MB/s, rmw enabled
+[    0.492026] raid6: using ssse3x2 recovery algorithm
+[    0.494774] ACPI: Added _OSI(Module Device)
+[    0.494872] ACPI: Added _OSI(Processor Device)
+[    0.494939] ACPI: Added _OSI(Processor Aggregator Device)
+[    0.520129] ACPI: 1 ACPI AML tables successfully acquired and loaded
+[    0.542464] ACPI: _OSC evaluation for CPUs failed, trying _PDC
+[    0.545298] ACPI: Interpreter enabled
+[    0.546892] ACPI: PM: (supports S0 S3 S5)
+[    0.547100] ACPI: Using IOAPIC for interrupt routing
+[    0.548495] PCI: Using host bridge windows from ACPI; if necessary, use "pci=nocrs" and report a bug
+[    0.548735] PCI: Using E820 reservations for host bridge windows
+[    0.549675] ACPI: Enabled 2 GPEs in block 00 to 3F
+[    0.575337] ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00-ff])
+[    0.575986] acpi PNP0A08:00: _OSC: OS supports [ExtendedConfig ASPM ClockPM Segments MSI HPX-Type3]
+[    0.577196] acpi PNP0A08:00: _OSC: platform does not support [LTR]
+[    0.578002] acpi PNP0A08:00: _OSC: OS now controls [PME PCIeCapability]
+[    0.581094] PCI host bridge to bus 0000:00
+[    0.581293] pci_bus 0000:00: root bus resource [io  0x0000-0x0cf7 window]
+[    0.581477] pci_bus 0000:00: root bus resource [io  0x0d00-0xffff window]
+[    0.581569] pci_bus 0000:00: root bus resource [mem 0x000a0000-0x000bffff window]
+[    0.581687] pci_bus 0000:00: root bus resource [mem 0x80000000-0xafffffff window]
+[    0.581786] pci_bus 0000:00: root bus resource [mem 0xc0000000-0xfebfffff window]
+[    0.581878] pci_bus 0000:00: root bus resource [mem 0x100000000-0x8ffffffff window]
+[    0.582126] pci_bus 0000:00: root bus resource [bus 00-ff]
+[    0.583886] pci 0000:00:00.0: [8086:29c0] type 00 class 0x060000
+[    0.587921] pci 0000:00:01.0: [1234:1111] type 00 class 0x030000
+[    0.589843] pci 0000:00:01.0: reg 0x10: [mem 0xfd000000-0xfdffffff pref]
+[    0.592297] pci 0000:00:01.0: reg 0x18: [mem 0xfebd0000-0xfebd0fff]
+[    0.598727] pci 0000:00:01.0: reg 0x30: [mem 0xfebc0000-0xfebcffff pref]
+[    0.600562] pci 0000:00:01.0: Video device with shadowed ROM at [mem 0x000c0000-0x000dffff]
+[    0.602111] pci 0000:00:02.0: [1af4:1000] type 00 class 0x020000
+[    0.603592] pci 0000:00:02.0: reg 0x10: [io  0xc0c0-0xc0df]
+[    0.605611] pci 0000:00:02.0: reg 0x14: [mem 0xfebd1000-0xfebd1fff]
+[    0.612675] pci 0000:00:02.0: reg 0x20: [mem 0xfe000000-0xfe003fff 64bit pref]
+[    0.615455] pci 0000:00:02.0: reg 0x30: [mem 0xfeb80000-0xfebbffff pref]
+[    0.617477] pci 0000:00:03.0: [1af4:1005] type 00 class 0x00ff00
+[    0.619714] pci 0000:00:03.0: reg 0x10: [io  0xc0e0-0xc0ff]
+[    0.621432] pci 0000:00:03.0: reg 0x14: [mem 0xfebd2000-0xfebd2fff]
+[    0.626708] pci 0000:00:03.0: reg 0x20: [mem 0xfe004000-0xfe007fff 64bit pref]
+[    0.630698] pci 0000:00:04.0: [1af4:1001] type 00 class 0x010000
+[    0.632502] pci 0000:00:04.0: reg 0x10: [io  0xc000-0xc07f]
+[    0.634504] pci 0000:00:04.0: reg 0x14: [mem 0xfebd3000-0xfebd3fff]
+[    0.641675] pci 0000:00:04.0: reg 0x20: [mem 0xfe008000-0xfe00bfff 64bit pref]
+[    0.645035] pci 0000:00:1f.0: [8086:2918] type 00 class 0x060100
+[    0.645849] pci 0000:00:1f.0: quirk: [io  0x0600-0x067f] claimed by ICH6 ACPI/GPIO/TCO
+[    0.646914] pci 0000:00:1f.2: [8086:2922] type 00 class 0x010601
+[    0.654143] pci 0000:00:1f.2: reg 0x20: [io  0xc100-0xc11f]
+[    0.655675] pci 0000:00:1f.2: reg 0x24: [mem 0xfebd4000-0xfebd4fff]
+[    0.658515] pci 0000:00:1f.3: [8086:2930] type 00 class 0x0c0500
+[    0.661715] pci 0000:00:1f.3: reg 0x20: [io  0x0700-0x073f]
+[    0.670448] ACPI: PCI: Interrupt link LNKA configured for IRQ 10
+[    0.670636] ACPI: PCI: Interrupt link LNKA disabled
+[    0.672567] ACPI: PCI: Interrupt link LNKB configured for IRQ 10
+[    0.672851] ACPI: PCI: Interrupt link LNKB disabled
+[    0.673478] ACPI: PCI: Interrupt link LNKC configured for IRQ 11
+[    0.673690] ACPI: PCI: Interrupt link LNKC disabled
+[    0.674251] ACPI: PCI: Interrupt link LNKD configured for IRQ 11
+[    0.674380] ACPI: PCI: Interrupt link LNKD disabled
+[    0.674964] ACPI: PCI: Interrupt link LNKE configured for IRQ 10
+[    0.675057] ACPI: PCI: Interrupt link LNKE disabled
+[    0.675450] ACPI: PCI: Interrupt link LNKF configured for IRQ 10
+[    0.675545] ACPI: PCI: Interrupt link LNKF disabled
+[    0.675958] ACPI: PCI: Interrupt link LNKG configured for IRQ 11
+[    0.676042] ACPI: PCI: Interrupt link LNKG disabled
+[    0.676379] ACPI: PCI: Interrupt link LNKH configured for IRQ 11
+[    0.676462] ACPI: PCI: Interrupt link LNKH disabled
+[    0.676610] ACPI: PCI: Interrupt link GSIA configured for IRQ 16
+[    0.676733] ACPI: PCI: Interrupt link GSIB configured for IRQ 17
+[    0.676855] ACPI: PCI: Interrupt link GSIC configured for IRQ 18
+[    0.676987] ACPI: PCI: Interrupt link GSID configured for IRQ 19
+[    0.677103] ACPI: PCI: Interrupt link GSIE configured for IRQ 20
+[    0.677216] ACPI: PCI: Interrupt link GSIF configured for IRQ 21
+[    0.677336] ACPI: PCI: Interrupt link GSIG configured for IRQ 22
+[    0.677449] ACPI: PCI: Interrupt link GSIH configured for IRQ 23
+[    0.681483] iommu: Default domain type: Translated
+[    0.681690] iommu: DMA domain TLB invalidation policy: lazy mode
+[    0.683432] SCSI subsystem initialized
+[    0.685799] ACPI: bus type USB registered
+[    0.686705] usbcore: registered new interface driver usbfs
+[    0.687184] usbcore: registered new interface driver hub
+[    0.687400] usbcore: registered new device driver usb
+[    0.687830] pps_core: LinuxPPS API ver. 1 registered
+[    0.687904] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.688090] PTP clock support registered
+[    0.690237] Advanced Linux Sound Architecture Driver Initialized.
+[    0.700291] Bluetooth: Core ver 2.22
+[    0.700538] NET: Registered PF_BLUETOOTH protocol family
+[    0.700619] Bluetooth: HCI device and connection manager initialized
+[    0.700836] Bluetooth: HCI socket layer initialized
+[    0.700979] Bluetooth: L2CAP socket layer initialized
+[    0.701171] Bluetooth: SCO socket layer initialized
+[    0.705242] PCI: Using ACPI for IRQ routing
+[    0.709909] pci 0000:00:01.0: vgaarb: setting as boot VGA device
+[    0.710048] pci 0000:00:01.0: vgaarb: bridge control possible
+[    0.710167] pci 0000:00:01.0: vgaarb: VGA device added: decodes=io+mem,owns=io+mem,locks=none
+[    0.710314] vgaarb: loaded
+[    0.710889] hpet0: at MMIO 0xfed00000, IRQs 2, 8, 0
+[    0.711037] hpet0: 3 comparators, 64-bit 100.000000 MHz counter
+[    0.715541] clocksource: Switched to clocksource tsc-early
+[    0.718568] pnp: PnP ACPI init
+[    0.723294] system 00:04: [mem 0xb0000000-0xbfffffff window] has been reserved
+[    0.726078] pnp: PnP ACPI: found 5 devices
+[    0.749403] clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+[    0.758405] NET: Registered PF_INET protocol family
+[    0.759815] IP idents hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.766630] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[    0.766877] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.767151] TCP established hash table entries: 1024 (order: 1, 8192 bytes, linear)
+[    0.767462] TCP bind hash table entries: 1024 (order: 3, 32768 bytes, linear)
+[    0.767721] TCP: Hash tables configured (established 1024 bind 1024)
+[    0.771150] UDP hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.771475] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.773168] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.776234] RPC: Registered named UNIX socket transport module.
+[    0.776430] RPC: Registered udp transport module.
+[    0.776522] RPC: Registered tcp transport module.
+[    0.776604] RPC: Registered tcp-with-tls transport module.
+[    0.776742] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    0.777854] pci_bus 0000:00: resource 4 [io  0x0000-0x0cf7 window]
+[    0.778002] pci_bus 0000:00: resource 5 [io  0x0d00-0xffff window]
+[    0.778222] pci_bus 0000:00: resource 6 [mem 0x000a0000-0x000bffff window]
+[    0.778352] pci_bus 0000:00: resource 7 [mem 0x80000000-0xafffffff window]
+[    0.778491] pci_bus 0000:00: resource 8 [mem 0xc0000000-0xfebfffff window]
+[    0.778623] pci_bus 0000:00: resource 9 [mem 0x100000000-0x8ffffffff window]
+[    0.779258] PCI: CLS 0 bytes, default 64
+[    0.784707] Trying to unpack rootfs image as initramfs...
+[    0.796064] RAPL PMU: API unit is 2^-32 Joules, 0 fixed counters, 10737418240 ms ovfl timer
+[    0.818519] Initialise system trusted keyrings
+[    0.820725] workingset: timestamp_bits=46 max_order=15 bucket_order=0
+[    0.823950] NFS: Registering the id_resolver key type
+[    0.824421] Key type id_resolver registered
+[    0.824527] Key type id_legacy registered
+[    0.826936] Key type cifs.idmap registered
+[    0.882073] xor: automatically using best checksumming function   avx       
+[    0.882353] Key type asymmetric registered
+[    0.882494] Asymmetric key parser 'x509' registered
+[    0.882859] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 250)
+[    0.883157] io scheduler mq-deadline registered
+[    0.883267] io scheduler kyber registered
+[    0.883612] io scheduler bfq registered
+[    0.886964] input: Power Button as /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0
+[    0.893997] ACPI: button: Power Button [PWRF]
+[    0.926610] Freeing initrd memory: 5188K
+[    0.926833] [ROOTFS_TIME] populate_rootfs unpack done
+[    0.928260] ACPI: \_SB_.GSIG: Enabled at IRQ 22
+[    0.935058] ACPI: \_SB_.GSIH: Enabled at IRQ 23
+[    0.937041] ACPI: \_SB_.GSIE: Enabled at IRQ 20
+[    0.939498] Serial: 8250/16550 driver, 4 ports, IRQ sharing disabled
+[    0.942698] 00:01: ttyS1 at I/O 0x2f8 (irq = 3, base_baud = 115200) is a 16550A
+[    0.944748] 00:02: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+[    0.967007] Linux agpgart interface v0.103
+[    0.968158] ACPI: bus type drm_connector registered
+[    0.968801] bochs-drm 0000:00:01.0: vgaarb: deactivate vga console
+[    0.970620] [drm] Found bochs VGA, ID 0xb0c5.
+[    0.970735] [drm] Framebuffer size 16384 kB @ 0xfd000000, mmio @ 0xfebd0000.
+[    0.974659] [drm] Found EDID data blob.
+[    0.980898] [drm] Initialized bochs-drm 1.0.0 20130925 for 0000:00:01.0 on minor 0
+[    1.002270] fbcon: bochs-drmdrmfb (fb0) is primary device
+[    1.038056] Console: switching to colour frame buffer device 160x50
+[    1.046357] bochs-drm 0000:00:01.0: [drm] fb0: bochs-drmdrmfb frame buffer device
+[    1.088034] brd: module loaded
+[    1.089067] virtio_blk virtio2: 4/0/0 default/read/poll queues
+[    1.099563] virtio_blk virtio2: [vda] 415238 512-byte logical blocks (213 MB/203 MiB)
+[    1.110966] ACPI: \_SB_.GSIA: Enabled at IRQ 16
+[    1.115914] ahci 0000:00:1f.2: AHCI 0001.0000 32 slots 6 ports 1.5 Gbps 0x3f impl SATA mode
+[    1.116160] ahci 0000:00:1f.2: flags: 64bit ncq only 
+[    1.122885] scsi host0: ahci
+[    1.125208] scsi host1: ahci
+[    1.126284] scsi host2: ahci
+[    1.127404] scsi host3: ahci
+[    1.128783] scsi host4: ahci
+[    1.129810] scsi host5: ahci
+[    1.130578] ata1: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4100 irq 31
+[    1.130835] ata2: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4180 irq 31
+[    1.130941] ata3: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4200 irq 31
+[    1.131035] ata4: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4280 irq 31
+[    1.131128] ata5: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4300 irq 31
+[    1.131285] ata6: SATA max UDMA/133 abar m4096@0xfebd4000 port 0xfebd4380 irq 31
+[    1.141138] e100: Intel(R) PRO/100 Network Driver
+[    1.141316] e100: Copyright(c) 1999-2006 Intel Corporation
+[    1.141623] e1000: Intel(R) PRO/1000 Network Driver
+[    1.141786] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[    1.142041] e1000e: Intel(R) PRO/1000 Network Driver
+[    1.142145] e1000e: Copyright(c) 1999 - 2015 Intel Corporation.
+[    1.142364] igb: Intel(R) Gigabit Ethernet Network Driver
+[    1.142505] igb: Copyright (c) 2007-2014 Intel Corporation.
+[    1.144465] usbcore: registered new interface driver usb-storage
+[    1.145210] usbcore: registered new interface driver usbserial_generic
+[    1.145585] usbserial: USB Serial support registered for generic
+[    1.145977] usbcore: registered new interface driver ftdi_sio
+[    1.146153] usbserial: USB Serial support registered for FTDI USB Serial Device
+[    1.146373] usbcore: registered new interface driver pl2303
+[    1.146532] usbserial: USB Serial support registered for pl2303
+[    1.147480] i8042: PNP: No PS/2 controller found.
+[    1.148902] mousedev: PS/2 mouse device common for all mice
+[    1.151826] rtc_cmos 00:03: RTC can wake from S4
+[    1.156913] rtc_cmos 00:03: registered as rtc0
+[    1.157924] rtc_cmos 00:03: setting system clock to 2026-11-18T08:37:14 UTC (1794991034)
+[    1.169049] rtc_cmos 00:03: alarms up to one day, y3k, 242 bytes nvram, hpet irqs
+
+[요청]
+명세를 만족하는 최소 복구 커널이 되도록, 기준 설정 위에 덮어쓸 cfg 항목 전체를 제출하라. 지도에서 켜진 옵션 중 명세상 불필요한 것은 모두 끄고, 끄는 방법은 지도의 분류를 따르라.
